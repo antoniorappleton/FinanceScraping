@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FinanceScraping - Market Terminal (Static)</title>
+  <title>FinanceScraping - Mobile Ready</title>
   <style>
     * { box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 20px; background: #f8f9fa; color: #333; }
@@ -28,31 +28,27 @@
     .status.loading { background: #fff3cd; color: #856404; }
     .result-box { background: #1e1e1e; color: #d4d4d4; padding: 20px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 13px; max-height: 600px; overflow: auto; white-space: pre-wrap; }
     .price-highlight { color: #4caf50; font-weight: bold; font-size: 1.2em; }
-    .suggestions-dropdown { position: absolute; background: white; border: 1px solid #ddd; border-top: none; max-height: 200px; overflow-y: auto; z-index: 1000; width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 0 0 8px 8px; }
-    .suggestion-item { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; }
-    .suggestion-item:hover { background: #f8f9fa; }
-    .suggestion-item:last-child { border-bottom: none; }
     @media (max-width: 768px) { .search-panel { flex-direction: column; } .field { min-width: auto; } }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>📈 FinanceScraping Terminal</h1>
-    <p class="subtitle">Pesquisa tickers globais com dados reais (FMP API Demo) | <a href="https://github.com/antoniorappleton/FinanceScraping" target="_blank">Source</a> | Local: python app.py</p>
+    <p class="subtitle">Pesquisa tickers globais reais | Funciona PC/Mobile | <a href="https://github.com/antoniorappleton/FinanceScraping" target="_blank">Source</a></p>
 
     <div class="search-panel">
       <div class="field">
         <label for="market">Mercado</label>
         <select id="market">
-          <option value="US">🇺🇸 US (NYSE/NASDAQ)</option>
-          <option value="BR">🇧🇷 Brasil (B3)</option>
-          <option value="PT">🇵🇹 Portugal (Lisboa)</option>
-          <option value="EU">🇪🇺 Europa</option>
+          <option value="US">🇺🇸 US</option>
+          <option value="BR">🇧🇷 BR</option>
+          <option value="PT">🇵🇹 PT</option>
+          <option value="EU">🇪🇺 EU</option>
         </select>
       </div>
       <div class="field">
         <label for="ticker">Ticker</label>
-        <input id="ticker" type="text" placeholder="Ex: AAPL, PETR4, NOS, SAP" />
+        <input id="ticker" type="text" placeholder="AAPL, PETR4, NOS, SAP" />
       </div>
       <div class="actions">
         <button id="searchBtn">🔍 Buscar</button>
@@ -60,101 +56,93 @@
     </div>
 
     <div class="quick-examples">
-      <span>Exemplos:</span>
-      <button class="chip" data-ticker="AAPL" data-market="US">AAPL</button>
-      <button class="chip" data-ticker="PETR4" data-market="BR">PETR4</button>
-      <button class="chip" data-ticker="NOS" data-market="PT">NOS</button>
-      <button class="chip" data-ticker="SAP" data-market="EU">SAP</button>
+      <span>Quick:</span>
+      <button class="chip" onclick="loadTicker('AAPL', 'US')">AAPL</button>
+      <button class="chip" onclick="loadTicker('PETR4', 'BR')">PETR4</button>
+      <button class="chip" onclick="loadTicker('NOS', 'PT')">NOS</button>
+      <button class="chip" onclick="loadTicker('SAP', 'EU')">SAP</button>
     </div>
 
-    <div id="status" class="status">Ready to search! (Enter or click)</div>
-    <pre id="result" class="result-box">{"message": "Teste AAPL para ver dados reais!"}</pre>
+    <div id="status" class="status">Ready! Click chips or search.</div>
+    <pre id="result" class="result-box">{"status": "Test AAPL!"}</pre>
   </div>
 
   <script>
-    // Free FMP API Demo Key (public, rate-limited) - Replace with own if needed
-    const FMP_API_KEY = 'demo';  // Works for demo endpoints
-    const FMP_BASE = 'https://financialmodelingprep.com/api/v3';
+    const API_KEY = 'demo';
+    const BASE = 'https://financialmodelingprep.com/api/v3';
 
-    const tickerEl = document.getElementById('ticker');
-    const marketEl = document.getElementById('market');
-    const searchBtn = document.getElementById('searchBtn');
-    const resultEl = document.getElementById('result');
-    const statusEl = document.getElementById('status');
-    const chips = document.querySelectorAll('.chip');
-
-    let debounceTimer;
+    function loadTicker(ticker, market) {
+      document.getElementById('ticker').value = ticker;
+      document.getElementById('market').value = market;
+      searchQuote(ticker, market);
+    }
 
     async function searchQuote(ticker, market) {
-      statusEl.textContent = `Searching ${ticker} (${market})...`;
-      statusEl.className = 'status loading';
-      resultEl.textContent = 'Loading...';
+      const status = document.getElementById('status');
+      const result = document.getElementById('result');
+      
+      status.textContent = `Loading ${ticker}...`;
+      status.className = 'status loading';
+      result.textContent = 'Fetching...';
 
-      // Normalize ticker
       let symbol = ticker.toUpperCase();
-      if (market === 'BR' && !symbol.endsWith('.SA')) symbol += '.SA';
-      if (market === 'PT' && !symbol.endsWith('.LS')) symbol += '.LS';
-      if (market === 'EU' && symbol === 'SAP') symbol = 'SAP.DE';
+      if (market === 'BR') symbol += '.SA';
+      if (market === 'PT') symbol += '.LS';
+      if (market === 'EU' && ticker === 'SAP') symbol = 'SAP.DE';
 
       try {
-        // Profile first
-        const profileUrl = `${FMP_BASE}/profile/${symbol}?apikey=${FMP_API_KEY}`;
-        const profileRes = await fetch(profileUrl);
-        let data = await profileRes.json();
-
-        if (data.length === 0 || data[0].companyName === undefined) {
-          // Fallback quote
-          const quoteUrl = `${FMP_BASE}/quote/${symbol}?apikey=${FMP_API_KEY}`;
-          const quoteRes = await fetch(quoteUrl);
-          data = await quoteRes.json();
-          if (data.length === 0) throw new Error('No data');
-          data = data.map(q => ({ symbol: q.symbol, price: q.price, ...q }));
+        // Quote first (most reliable)
+        const quoteRes = await fetch(`${BASE}/quote/${symbol}?apikey=${API_KEY}`);
+        let data = await quoteRes.json();
+        
+        if (!data || data.length === 0) {
+          throw new Error('No quote data');
         }
-
-        // Enhance with more data if profile
-        if (data[0].companyName) {
-          const symbol = data[0].symbol;
-          const keyUrl = `${FMP_BASE}/key-metrics-ttm/${symbol}?apikey=${FMP_API_KEY}`;
-          const keyRes = await fetch(keyUrl);
-          const keys = await keyRes.json();
-          if (keys.length > 0) data[0].metrics = keys[0];
-        }
-
-        statusEl.textContent = `✅ Data found for ${symbol}`;
-        statusEl.className = 'status';
-        resultEl.textContent = JSON.stringify(data[0], null, 2);
-        resultEl.innerHTML = resultEl.textContent.replace(/("price":\s*[-.\d]+)/g, '<span class="price-highlight">$1</span>');
+        
+        // Take first result
+        const quote = data[0];
+        const fullData = {
+          symbol: quote.symbol,
+          price: quote.price,
+          change: quote.change,
+          changePercent: quote.changesPercentage,
+          marketCap: quote.marketCap,
+          volume: quote.volume,
+          timestamp: new Date().toLocaleString()
+        };
+        
+        // Try profile if possible
+        try {
+          const profileRes = await fetch(`${BASE}/profile/${symbol}?apikey=${API_KEY}`);
+          const profile = await profileRes.json();
+          if (profile && profile.length > 0) {
+            fullData.companyName = profile[0].companyName;
+            fullData.sector = profile[0].sector;
+          }
+        } catch {}
+        
+        status.textContent = `✅ ${symbol} - $${fullData.price}`;
+        status.className = 'status';
+        result.textContent = JSON.stringify(fullData, null, 2);
       } catch (err) {
-        statusEl.textContent = `❌ ${err.message} - Try AAPL, PETR4.SA, NOS.LS`;
-        statusEl.className = 'status error';
-        resultEl.textContent = JSON.stringify({ error: err.message, try: ['AAPL', 'PETR4', 'NOS'] }, null, 2);
+        status.textContent = `❌ ${err.message}`;
+        status.className = 'status error';
+        result.textContent = `Error: ${err.message}\n\nTry: AAPL (US), PETR4 (BR), NOS (PT)`;
       }
     }
 
     // Events
-    function debounce(fn, ms) {
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(fn, ms);
-    }
-
-    tickerEl.addEventListener('input', () => debounce(() => {}, 300));
-    searchBtn.addEventListener('click', () => searchQuote(tickerEl.value, marketEl.value));
-    tickerEl.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchQuote(tickerEl.value, marketEl.value); });
-
-    chips.forEach(chip => {
-      chip.addEventListener('click', () => {
-        tickerEl.value = chip.dataset.ticker;
-        marketEl.value = chip.dataset.market || 'US';
-        searchQuote(chip.dataset.ticker, chip.dataset.market || 'US');
-      });
-    });
-
-    // Auto-search example on load
-    setTimeout(() => {
-      tickerEl.value = 'AAPL';
-      marketEl.value = 'US';
-      // searchQuote('AAPL', 'US');
-    }, 500);
+    document.getElementById('searchBtn').onclick = () => searchQuote(
+      document.getElementById('ticker').value,
+      document.getElementById('market').value
+    );
+    
+    document.getElementById('ticker').onkeypress = (e) => {
+      if (e.key === 'Enter') searchQuote(
+        document.getElementById('ticker').value,
+        document.getElementById('market').value
+      );
+    };
   </script>
 </body>
 </html>
