@@ -1,0 +1,2 @@
+# TODO: GitHub Repo Setup for FinanceScraping\n\n## Steps:\n1. [x] Create/update comprehensive README.md\n2. [x] Check/update .gitignore\n3. [x] git init\n4. [x] git remote add origin https://github.com/antoniorappleton/FinanceScraping.git\n5. [x] git add .\n6. [ ] git commit -m "Initial commit: Finance market scraper terminal app"\n7. [ ] git branch -M main\n8. [ ] git push -u origin main\n9. [ ] Verify on GitHub and attempt_completion
+
