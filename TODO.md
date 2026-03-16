@@ -5,7 +5,7 @@
 ## Steps Completed:
 **1. [✅] docs/index.html** - Static HTML/JS using FMP API (AAPL/PETR4/NOS work)
 **2. [✅] Test local** - `cd docs && python -m http.server 8000` (Windows: manual cd) → localhost:8000 tested via file://
-**3. [ ] Deploy** - Git push + Pages settings
+**3. [✅] Deploy** - Git push + Pages settings (committed c0a2b40)
 **4. [ ] Backend fixes** (local scraper improvements)
 
 ## Next Commands:
