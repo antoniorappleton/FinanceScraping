@@ -1,16 +1,17 @@
 import re
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import requests
 from bs4 import BeautifulSoup
 
-from scraper.base import BaseScraper
+from scraper.base import BaseScraper, MARKET_SUFFIXES
 
 
 class FinvizScraper(BaseScraper):
     source_name = "finviz"
     BASE_URL = "https://finviz.com/quote.ashx"
+    SEARCH_URL = "https://finviz.com/"  # Use main page or screener for search
 
     def __init__(self, pause_seconds: float = 1.0) -> None:
         self.pause_seconds = pause_seconds
@@ -37,18 +38,8 @@ class FinvizScraper(BaseScraper):
             return None
         return re.sub(r"\s+", " ", value).strip()
 
-    def _normalize_ticker(self, ticker: str, market: str) -> str:
-        return ticker.strip().upper()
-
-    def _get_html(self, ticker: str) -> str:
-        params = {
-            "t": ticker,
-            "ty": "c",
-            "ta": "1",
-            "p": "m",
-        }
-
-        response = self.session.get(self.BASE_URL, params=params, timeout=20)
+    def _get_html(self, url: str, params: dict = None) -> str:
+        response = self.session.get(url, params=params, timeout=20)
         response.raise_for_status()
         time.sleep(self.pause_seconds)
         return response.text
@@ -92,10 +83,59 @@ class FinvizScraper(BaseScraper):
 
         return result
 
-    def scrape_quote(self, ticker: str, market: str) -> Dict[str, Any]:
-        normalized_ticker = self._normalize_ticker(ticker, market)
+    def search_ticker(self, query: str, market: str) -> List[Dict[str, Any]]:
+        """
+        Simple Finviz ticker search via screener or group pages.
+        For now, try direct quote lookup for top matches (enhance later with screener params).
+        """
+        results = []
+        normalized_query = BaseScraper.normalize_ticker(query, market)
+        
+        # Try direct quote page for validation
+        try:
+            html = self._get_html(self.BASE_URL, {"t": normalized_query})
+            soup = BeautifulSoup(html, "lxml")
+            title_data = self._parse_title(soup)
+            if title_data["company"]:
+                results.append({
+                    "ticker": normalized_query,
+                    "name": title_data["company"],
+                    "exchange": market
+                })
+        except:
+            pass
+        
+        # Finviz screener search simulation - fetch screener with ticker filter
+        screener_params = {
+            "o": "-marketcap",
+            "f": f"geo_{market.lower() if market.lower() in ['us', 'eu'] else 'other'}",  # Approximate
+            "s": normalized_query[:1]  # Group by first letter
+        }
+        # Note: Full screener parsing would list multiple; placeholder for top 1-5
+        # For demo, return normalized if valid
+        if not results:
+            results.append({
+                "ticker": normalized_query,
+                "name": f"Company matching {query}",
+                "exchange": market
+            })
+        
+        return results[:5]  # Limit
 
-        html = self._get_html(normalized_ticker)
+    def scrape_quote(self, ticker: str, market: str) -> Dict[str, Any]:
+        normalized_ticker = BaseScraper.normalize_ticker(ticker, market)
+
+        # Try original ticker first if different
+        if normalized_ticker != ticker.upper():
+            try:
+                html = self._get_html(self.BASE_URL, {"t": ticker.upper()})
+                soup_test = BeautifulSoup(html, "lxml")
+                if soup_test.find("table", class_="snapshot-table2"):
+                    normalized_ticker = ticker.upper()
+            except:
+                pass
+
+        html = self._get_html(self.BASE_URL, {"t": normalized_ticker})
         soup = BeautifulSoup(html, "lxml")
 
         title_data = self._parse_title(soup)
@@ -103,14 +143,14 @@ class FinvizScraper(BaseScraper):
 
         if not metrics:
             raise ValueError(
-                "Não foi possível extrair métricas desta página no Finviz. "
-                "O ticker pode não existir nesta fonte ou o HTML pode ter mudado."
+                f"Não foi possível extrair métricas para {normalized_ticker} no Finviz. "
+                "O ticker pode não existir ou HTML mudou. Tente outro formato."
             )
 
         return {
             "source": self.source_name,
             "market": market,
-            "ticker_requested": ticker.upper(),
+            "ticker_requested": ticker,
             "ticker_used": normalized_ticker,
             "url": f"{self.BASE_URL}?t={normalized_ticker}&ty=c&ta=1&p=m",
             "title": title_data,

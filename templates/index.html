@@ -1,61 +1,61 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Market Scraper Terminal</title>
-    <link rel="stylesheet" href="../style.css">
-</head>
-<body>
+    <link rel="stylesheet" href="../static/style.css" />
+  </head>
+  <body>
     <main class="container">
-        <h1>Market Scraper Terminal</h1>
-        <p class="subtitle">
-            Escolhe a fonte, o mercado e pesquisa um ticker.
-        </p>
+      <h1>Market Scraper Terminal</h1>
+      <p class="subtitle">Escolhe a fonte, o mercado e pesquisa um ticker.</p>
 
-        <section class="search-panel">
-            <div class="field">
-                <label for="source">Fonte</label>
-                <select id="source">
-                    {% for source in sources %}
-                    <option value="{{ source }}">{{ source }}</option>
-                    {% endfor %}
-                </select>
-            </div>
+      <section class="search-panel">
+        <div class="field">
+          <label for="source">Fonte</label>
+          <select id="source">
+            {% for source in sources %}
+            <option value="{{ source }}">
+              Fonte
+            </option>
+            {% endfor %}
+          </select>
+        </div>
 
-            <div class="field">
-                <label for="market">Mercado</label>
-                <select id="market">
-                    {% for code, name in markets.items() %}
-                    <option value="{{ code }}">{{ name }} ({{ code }})</option>
-                    {% endfor %}
-                </select>
-            </div>
+        <div class="field">
+          <label for="market">Mercado</label>
+          <select id="market">
+            {% for code, name in markets.items() %}
+            <option value="{{ code }}">Mercado</option>
+            {% endfor %}
+          </select>
+        </div>
 
-            <div class="field field-grow">
-                <label for="ticker">Ticker</label>
-                <input id="ticker" type="text" placeholder="Ex: NVDA, AAPL, AMD">
-            </div>
+        <div class="field field-grow">
+          <label for="ticker">Ticker</label>
+          <input id="ticker" type="text" placeholder="Ex: NVDA, AAPL, AMD" />
+        </div>
 
-            <div class="actions">
-                <button id="searchBtn">Buscar</button>
-            </div>
-        </section>
+        <div class="actions">
+          <button id="searchBtn">Buscar</button>
+        </div>
+      </section>
 
-        <section class="quick-examples">
-            <span>Exemplos:</span>
-            <button class="chip" data-ticker="NVDA">NVDA</button>
-            <button class="chip" data-ticker="AAPL">AAPL</button>
-            <button class="chip" data-ticker="AMD">AMD</button>
-            <button class="chip" data-ticker="META">META</button>
-        </section>
+      <section class="quick-examples">
+        <span>Exemplos:</span>
+        <button class="chip" data-ticker="NVDA">NVDA</button>
+        <button class="chip" data-ticker="AAPL">AAPL</button>
+        <button class="chip" data-ticker="AMD">AMD</button>
+        <button class="chip" data-ticker="META">META</button>
+      </section>
 
-        <section>
-            <div id="status" class="status">À espera de pesquisa...</div>
-            <pre id="result" class="result-box">{}</pre>
-        </section>
+      <section>
+        <div id="status" class="status">À espera de pesquisa...</div>
+        <pre id="result" class="result-box">{}</pre>
+      </section>
     </main>
 
     <script src="{{ url_for('static', filename='app.js') }}"></script>
-</body>
+  </body>
 </html>

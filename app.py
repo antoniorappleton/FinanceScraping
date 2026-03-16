@@ -18,6 +18,41 @@ def index():
     )
 
 
+@app.route("/api/search_ticker", methods=["POST"])
+def search_ticker():
+    data = request.get_json(silent=True) or {}
+
+    query = str(data.get("query", "")).strip()
+    market = str(data.get("market", "")).strip().upper()
+    source = str(data.get("source", "")).strip()
+
+    if not query:
+        return jsonify({"error": "Query em falta."}), 400
+
+    if market not in SUPPORTED_MARKETS:
+        return jsonify({"error": "Mercado inválido."}), 400
+
+    if source not in SCRAPER_REGISTRY:
+        return jsonify({"error": "Fonte inválida."}), 400
+
+    scraper = SCRAPER_REGISTRY[source]
+
+    try:
+        suggestions = scraper.search_ticker(query=query, market=market)
+        return jsonify({
+            "query": query,
+            "market": market,
+            "source": source,
+            "suggestions": suggestions
+        })
+    except Exception as exc:
+        return jsonify({
+            "error": "Erro na pesquisa de ticker.",
+            "details": str(exc),
+            "suggestions": []
+        }), 500
+
+
 @app.route("/api/search", methods=["POST"])
 def search():
     data = request.get_json(silent=True) or {}
@@ -36,6 +71,7 @@ def search():
         return jsonify({"error": "Mercado inválido."}), 400
 
     scraper = SCRAPER_REGISTRY[source]
+    suggestions = []
 
     try:
         result = scraper.scrape_quote(ticker=ticker, market=market)
@@ -51,20 +87,24 @@ def search():
 
         return jsonify(result)
 
-    except NotImplementedError as exc:
-        return jsonify(
-            {
-                "error": "Fonte ainda não implementada.",
-                "details": str(exc),
-            }
-        ), 501
+    except NotImplementedError:
+        error_msg = "Fonte ainda não implementada."
+    except ValueError as ve:
+        error_msg = str(ve)
+        # Fallback to search_ticker for suggestions
+        try:
+            suggestions = scraper.search_ticker(query=ticker, market=market)
+        except:
+            suggestions = []
     except Exception as exc:
-        return jsonify(
-            {
-                "error": "Erro ao processar a pesquisa.",
-                "details": str(exc),
-            }
-        ), 500
+        error_msg = "Erro ao processar a pesquisa."
+        suggestions = []
+
+    return jsonify({
+        "error": error_msg,
+        "suggestions": suggestions,
+        "try_tickers": [s.get("ticker") for s in suggestions[:3]]
+    }), 500 if "NotImplementedError" not in error_msg else 501
 
 
 if __name__ == "__main__":
