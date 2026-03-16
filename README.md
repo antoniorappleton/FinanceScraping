@@ -1,8 +1,9 @@
 # FinanceScraping - Market Scraper Terminal App
 
+[![Demo](https://img.shields.io/badge/Live_Demo-GitHub_Pages-brightgreen?style=for-the-badge&logo=github)](https://antoniorappleton.github.io/FinanceScraping/)
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-2.0%2B-green)](https://flask.palletsprojects.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/Live_Demo-MIT-yellow.svg)](LICENSE)
 
 ## 📄 Descrição
 
@@ -21,6 +22,14 @@ Dados são salvos automaticamente em formato JSON na pasta `data/raw/`.
 - API endpoint `/api/search` para buscas programáticas
 - Salvamento automático de dados raw
 - Estrutura modular com registry de scrapers
+
+## 🌐 Live Demo
+
+**Static demo** da interface (pesquisa simulada, dados demo). Funciona em **browser e telemóvel**!
+
+[![Demo Screenshot](https://img.shields.io/badge/Teste_Móvel-Browser/Phone-green)](https://antoniorappleton.github.io/FinanceScraping/)
+
+**App completa:** Execute localmente (`python app.py`).
 
 ## 📱 Demo UI
 

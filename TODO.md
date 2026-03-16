@@ -1,33 +1,28 @@
-o # Fix Market Scraper Errors (405, JSON, Dropdowns)
-
-**Status:** ✅ Complete
-
-## Steps:
-- [x] **Step 1:** Stop VSCode Live Server (Ctrl+C in its terminal or VSCode: Ctrl+Shift+P > Live Server: Stop Live Server).
-- [x] **Step 2:** Run Flask backend: `python app.py` (in project root).
-- [x] **Step 3:** Open browser: http://127.0.0.1:5000
-- [x] **Step 4:** Verify dropdowns:
-  | Dropdown | Expected                      |
-  | -------- | ----------------------------- |
-  | Fonte    | Finviz, Yahoo, Google Finance | \n | Mercado | US (Americano), EU (Europeu), PT (Português), BR (Brasileiro) |
-- [x] **Step 5:** Test search: AAPL + Yahoo + US → JSON result or suggestions (no 405).
-- [x] Create this TODO (auto)
-
-**Completed:** 6/6
-
-**Notes:** Backend routes correct. Issue was Live Server (port 5500, no /api). Flask provides data/JSON. All tests passed: dropdowns fixed, no 405/JSON errors.
-
-# Git Commands - Make `git add .`, `commit`, `push origin main` work
+# GitHub Pages Demo - Serve index.html (Browser/Mobile)
 
 **Status:** ⏳ In Progress
 
-## Steps:
-- [x] **Step 1:** `git add .` (stage TODO.md, templates/index.html changes)
-- [x] **Step 2:** `git commit -m "FinanceScraping | primeira etapa "`
-- [x] **Step 3:** `git branch -m main` (rename branch to main, safe as origin/main matches HEAD)
-- [x] **Step 4:** `git push -u origin main` (push with upstream)
+## Approved Plan Steps:
 
-**Completed:** 0/4
+**1. Create docs/ folder files (Static Demo)**
+- [x] docs/index.html (standalone HTML, hardcoded sources/markets, inline CSS/JS mock)
+- [x] docs/.nojekyll (empty file for raw serving)
 
-**Notes:** Current branch: blackboxai/universal-ticker-support. origin/main up to date.
+**2. Update README.md**
+- [x] Add Live Demo badge/link + 🌐 section
+
+**3. Git & Deploy**
+- [x] `git add .`
+- [x] `git commit -m "feat: GitHub Pages static demo (/docs/) browser/mobile ready"`
+- [x] `git push origin main`
+- [ ] Repo Settings > Pages > main:/docs > Save
+
+**4. Test**
+- [ ] https://antoniorappleton.github.io/FinanceScraping/ → index.html loads
+- [ ] Test search AAPL/NOS/PETR4 → demo JSON
+- [ ] Mobile phone: responsive UI works
+
+**Notes:** Static demo simulates app (no real scraping). Full app: `python app.py`.
+
+**Completed:** 8/10
 
