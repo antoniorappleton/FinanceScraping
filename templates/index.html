@@ -4,12 +4,38 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Market Scraper Terminal</title>
-    <link rel="stylesheet" href="../static/style.css" />
+    <link rel="stylesheet" href="/static/style.css" />
+    <style>
+      .suggestions-dropdown {
+        position: absolute;
+        background: white;
+        border: 1px solid #ccc;
+        border-top: none;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 1000;
+        width: 100%;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .suggestion-item {
+        padding: 8px  q12px;
+        cursor: pointer;
+      }
+      .suggestion-item:hover {
+        background: #f0f0f0;
+      }
+      .field {
+        position: relative;
+      }
+    </style>
   </head>
   <body>
     <main class="container">
       <h1>Market Scraper Terminal</h1>
-      <p class="subtitle">Escolhe a fonte, o mercado e pesquisa um ticker.</p>
+      <p class="subtitle">
+        Escolhe a fonte, o mercado e pesquisa um ticker (auto-complete
+        disponível).
+      </p>
 
       <section class="search-panel">
         <div class="field">
@@ -17,7 +43,7 @@
           <select id="source">
             {% for source in sources %}
             <option value="{{ source }}">
-              Fonte
+              {{ source.replace('_', ' ').title() }}
             </option>
             {% endfor %}
           </select>
@@ -27,14 +53,18 @@
           <label for="market">Mercado</label>
           <select id="market">
             {% for code, name in markets.items() %}
-            <option value="{{ code }}">Mercado</option>
+            <option value="{{ code }}">{{ name }}</option>
             {% endfor %}
           </select>
         </div>
 
         <div class="field field-grow">
           <label for="ticker">Ticker</label>
-          <input id="ticker" type="text" placeholder="Ex: NVDA, AAPL, AMD" />
+          <input
+            id="ticker"
+            type="text"
+            placeholder="Ex: AAPL, petr4 (BR auto → PETR4.SA)"
+          />
         </div>
 
         <div class="actions">
@@ -43,19 +73,21 @@
       </section>
 
       <section class="quick-examples">
-        <span>Exemplos:</span>
-        <button class="chip" data-ticker="NVDA">NVDA</button>
-        <button class="chip" data-ticker="AAPL">AAPL</button>
-        <button class="chip" data-ticker="AMD">AMD</button>
-        <button class="chip" data-ticker="META">META</button>
+        <span>Exemplos rápidos:</span>
+        <button class="chip" data-ticker="AAPL">AAPL (US)</button>
+        <button class="chip" data-ticker="PETR4">PETR4 (BR)</button>
+        <button class="chip" data-ticker="NOS">NOS (PT)</button>
+        <button class="chip" data-ticker="SAP">SAP (EU)</button>
       </section>
 
       <section>
-        <div id="status" class="status">À espera de pesquisa...</div>
+        <div id="status" class="status">
+          À espera de pesquisa... (Ctrl+Enter para buscar)
+        </div>
         <pre id="result" class="result-box">{}</pre>
       </section>
     </main>
 
-    <script src="{{ url_for('static', filename='app.js') }}"></script>
+    <script src="/static/app.js"></script>
   </body>
 </html>

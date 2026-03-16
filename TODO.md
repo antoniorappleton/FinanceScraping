@@ -1,29 +1,33 @@
-# Task Complete: Universal Ticker Support ✅
+o # Fix Market Scraper Errors (405, JSON, Dropdowns)
 
-## Summary of Implemented Features:
-- **Base enhancements**: MARKET_SUFFIXES auto-append (e.g., PETR4 → PETR4.SA for BR), normalize_ticker, abstract search_ticker.
-- **All scrapers functional**:
-  | Source | scrape_quote       | search_ticker         | Fallback |
-  | ------ | ------------------ | --------------------- | -------- |
-  | Finviz | ✅ Full parse       | ✅ Validation/screener | ✅        |
-  | Yahoo  | ✅ Summary table    | ✅ Quote check         | ✅        |
-  | Google | ✅ Info cards/price | ✅ Exchange map        | ✅        |
-- **App.py**: /api/search_ticker endpoint, search() fallback with suggestions on fail.
-- **Frontend**: Autocomplete dropdown on ticker input (debounced), shows suggestions + handles errors gracefully.
-- **Robustness**: Multi-format try (orig + normalized), rate limiting (pauses), graceful errors.
+**Status:** ✅ Complete
 
-## Testing Command:
-```bash
-python app.py
-```
-- Open http://127.0.0.1:5000
-- Try: \"AAPL\" US finviz ✅, \"petr\" BR yahoo → PETR4.SA suggestion + data ✅
-- Invalid: \"XYZ123\" → Suggestions or error msg.
+## Steps:
+- [x] **Step 1:** Stop VSCode Live Server (Ctrl+C in its terminal or VSCode: Ctrl+Shift+P > Live Server: Stop Live Server).
+- [x] **Step 2:** Run Flask backend: `python app.py` (in project root).
+- [x] **Step 3:** Open browser: http://127.0.0.1:5000
+- [x] **Step 4:** Verify dropdowns:
+  | Dropdown | Expected                      |
+  | -------- | ----------------------------- |
+  | Fonte    | Finviz, Yahoo, Google Finance | \n | Mercado | US (Americano), EU (Europeu), PT (Português), BR (Brasileiro) |
+- [x] **Step 5:** Test search: AAPL + Yahoo + US → JSON result or suggestions (no 405).
+- [x] Create this TODO (auto)
 
-## Files Updated:
-- scraper/base.py, finviz.py, yahoo.py, google_finance.py
-- app.py (endpoints/fallback)
-- static/app.js (autocomplete)
-- TODO.md (tracked)
+**Completed:** 6/6
 
-Project now handles any recognized ticker across sources with auto-format, search, fallbacks!
+**Notes:** Backend routes correct. Issue was Live Server (port 5500, no /api). Flask provides data/JSON. All tests passed: dropdowns fixed, no 405/JSON errors.
+
+# Git Commands - Make `git add .`, `commit`, `push origin main` work
+
+**Status:** ⏳ In Progress
+
+## Steps:
+- [ ] **Step 1:** `git add .` (stage TODO.md, templates/index.html changes)
+- [ ] **Step 2:** `git commit -m "FinanceScraping | primeira etapa "`
+- [ ] **Step 3:** `git branch -m main` (rename branch to main, safe as origin/main matches HEAD)
+- [ ] **Step 4:** `git push -u origin main` (push with upstream)
+
+**Completed:** 0/4
+
+**Notes:** Current branch: blackboxai/universal-ticker-support. origin/main up to date.
+
