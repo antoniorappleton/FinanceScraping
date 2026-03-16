@@ -24,8 +24,8 @@ o # Fix Market Scraper Errors (405, JSON, Dropdowns)
 ## Steps:
 - [x] **Step 1:** `git add .` (stage TODO.md, templates/index.html changes)
 - [x] **Step 2:** `git commit -m "FinanceScraping | primeira etapa "`
-- [ ] **Step 3:** `git branch -m main` (rename branch to main, safe as origin/main matches HEAD)
-- [ ] **Step 4:** `git push -u origin main` (push with upstream)
+- [x] **Step 3:** `git branch -m main` (rename branch to main, safe as origin/main matches HEAD)
+- [x] **Step 4:** `git push -u origin main` (push with upstream)
 
 **Completed:** 0/4
 
