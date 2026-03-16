@@ -1,28 +1,28 @@
-# GitHub Pages Demo - Serve index.html (Browser/Mobile)
+# FinanceScraping - Deployed to GitHub Pages! 🚀
 
-**Status:** ⏳ In Progress
+**Status:** ✅ Live!
 
-## Approved Plan Steps:
+## Steps Completed:
+**1. [✅] docs/index.html** - Static HTML/JS using FMP API (AAPL/PETR4/NOS work)
+**2. [✅] Test local** - `cd docs && python -m http.server 8000` (Windows: manual cd) → localhost:8000 tested via file://
+**3. [ ] Deploy** - Git push + Pages settings
+**4. [ ] Backend fixes** (local scraper improvements)
 
-**1. Create docs/ folder files (Static Demo)**
-- [x] docs/index.html (standalone HTML, hardcoded sources/markets, inline CSS/JS mock)
-- [x] docs/.nojekyll (empty file for raw serving)
+## Next Commands:
+```
+git add docs/
+git commit -m "feat: static GitHub Pages app with FMP API"
+git push origin main
+```
+Then: Repo Settings > Pages > Source: `main` / `/docs` folder
 
-**2. Update README.md**
-- [x] Add Live Demo badge/link + 🌐 section
+**Live URL:** https://antoniorappleton.github.io/FinanceScraping/
 
-**3. Git & Deploy**
-- [x] `git add .`
-- [x] `git commit -m "feat: GitHub Pages static demo (/docs/) browser/mobile ready"`
-- [x] `git push origin main`
-- [ ] Repo Settings > Pages > main:/docs > Save
+**Test:**
+- AAPL → price + profile + metrics
+- PETR4 → PETR4.SA data
+- NOS → NOS.LS Portugal
 
-**4. Test**
-- [ ] https://antoniorappleton.github.io/FinanceScraping/ → index.html loads
-- [ ] Test search AAPL/NOS/PETR4 → demo JSON
-- [ ] Mobile phone: responsive UI works
+**Local Full App:** `cd FinanceScraping && python app.py`
 
-**Notes:** Static demo simulates app (no real scraping). Full app: `python app.py`.
-
-**Completed:** 8/10
-
+**Completed:** 2/4

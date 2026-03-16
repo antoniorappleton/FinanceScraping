@@ -1,307 +1,160 @@
 <!doctype html>
 <html lang="pt">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Market Scraper Terminal - Demo</title>
-    <style>
-      * {
-        box-sizing: border-box;
-      }
-      body {
-        margin: 0;
-        font-family: Arial, Helvetica, sans-serif;
-        background: #0f172a;
-        color: #e2e8f0;
-      }
-      .container {
-        max-width: 1100px;
-        margin: 40px auto;
-        padding: 24px;
-      }
-      h1 {
-        margin-bottom: 8px;
-      }
-      .subtitle {
-        color: #94a3b8;
-        margin-bottom: 24px;
-      }
-      .search-panel {
-        display: grid;
-        grid-template-columns: 220px 220px 1fr 140px;
-        gap: 16px;
-        align-items: end;
-        margin-bottom: 20px;
-      }
-      .field {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        position: relative;
-      }
-      .field-grow {
-        min-width: 0;
-      }
-      label {
-        font-size: 14px;
-        color: #cbd5e1;
-      }
-      select,
-      input {
-        width: 100%;
-        padding: 12px 14px;
-        border: 1px solid #334155;
-        border-radius: 10px;
-        background: #1e293b;
-        color: #f8fafc;
-        font-size: 15px;
-      }
-      button {
-        border: none;
-        border-radius: 10px;
-        padding: 12px 16px;
-        cursor: pointer;
-        font-size: 15px;
-      }
-      .actions button {
-        width: 100%;
-        background: #2563eb;
-        color: white;
-      }
-      .actions button:hover {
-        background: #1d4ed8;
-      }
-      .quick-examples {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-        align-items: center;
-        margin-bottom: 20px;
-      }
-      .chip {
-        background: #1e293b;
-        color: #e2e8f0;
-        border: 1px solid #334155;
-      }
-      .chip:hover {
-        background: #334155;
-      }
-      .status {
-        margin-bottom: 12px;
-        color: #fbbf24;
-        min-height: 24px;
-      }
-      .result-box {
-        background: #020617;
-        border: 1px solid #334155;
-        border-radius: 12px;
-        padding: 16px;
-        min-height: 360px;
-        overflow-x: auto;
-        white-space: pre-wrap;
-        word-break: break-word;
-        line-height: 1.5;
-      }
-      .suggestions-dropdown {
-        position: absolute;
-        background: white;
-        border: 1px solid #ccc;
-        border-top: none;
-        max-height: 200px;
-        overflow-y: auto;
-        z-index: 1000;
-        width: 100%;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-      }
-      .suggestion-item {
-        padding: 8px 12px;
-        cursor: pointer;
-        color: #333;
-      }
-      .suggestion-item:hover {
-        background: #f0f0f0;
-      }
-      .demo-note {
-        background: #1e293b;
-        border: 1px solid #2563eb;
-        border-radius: 8px;
-        padding: 16px;
-        margin-bottom: 20px;
-        font-size: 14px;
-        color: #93c5fd;
-      }
-      @media (max-width: 900px) {
-        .search-panel {
-          grid-template-columns: 1fr;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <main class="container">
-      <h1>Market Scraper Terminal</h1>
-      <p class="subtitle">Demo estático GitHub Pages (pesquisa simulada)</p>
-      <div class="demo-note">
-        <strong>⭐ Demo:</strong> Interface completa. Clique chips ou procura
-        para ver dados simulados. <strong>App completa:</strong>
-        <code>git clone + python app.py</code> → localhost:5000
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FinanceScraping - Market Terminal (Static)</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 20px; background: #f8f9fa; color: #333; }
+    .container { max-width: 900px; margin: 0 auto; }
+    h1 { text-align: center; color: #1a73e8; margin-bottom: 10px; }
+    .subtitle { text-align: center; color: #666; margin-bottom: 30px; }
+    .search-panel { background: white; padding: 24px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 16px; }
+    .field { flex: 1; min-width: 180px; position: relative; }
+    label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 6px; color: #555; }
+    select, input { width: 100%; padding: 12px 16px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; transition: border-color 0.2s; }
+    select:focus, input:focus { outline: none; border-color: #1a73e8; }
+    .actions { flex: 1 0 120px; display: flex; align-items: flex-end; }
+    button { width: 100%; padding: 14px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    button:hover { background: #1557b0; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    .quick-examples { background: white; padding: 16px 24px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    .quick-examples span { font-weight: 500; margin-right: 12px; }
+    .chip { background: #e8f4fd; color: #1a73e8; border: 1px solid #b3d9ff; padding: 8px 16px; border-radius: 20px; margin-right: 8px; cursor: pointer; font-size: 14px; transition: all 0.2s; }
+    .chip:hover { background: #1a73e8; color: white; }
+    .status { background: #f0f8ff; padding: 12px 16px; border-radius: 8px; margin-bottom: 12px; font-family: monospace; font-size: 14px; }
+    .status.error { background: #fff2f2; color: #d63031; }
+    .status.loading { background: #fff3cd; color: #856404; }
+    .result-box { background: #1e1e1e; color: #d4d4d4; padding: 20px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 13px; max-height: 600px; overflow: auto; white-space: pre-wrap; }
+    .price-highlight { color: #4caf50; font-weight: bold; font-size: 1.2em; }
+    .suggestions-dropdown { position: absolute; background: white; border: 1px solid #ddd; border-top: none; max-height: 200px; overflow-y: auto; z-index: 1000; width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 0 0 8px 8px; }
+    .suggestion-item { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; }
+    .suggestion-item:hover { background: #f8f9fa; }
+    .suggestion-item:last-child { border-bottom: none; }
+    @media (max-width: 768px) { .search-panel { flex-direction: column; } .field { min-width: auto; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📈 FinanceScraping Terminal</h1>
+    <p class="subtitle">Pesquisa tickers globais com dados reais (FMP API Demo) | <a href="https://github.com/antoniorappleton/FinanceScraping" target="_blank">Source</a> | Local: python app.py</p>
+
+    <div class="search-panel">
+      <div class="field">
+        <label for="market">Mercado</label>
+        <select id="market">
+          <option value="US">🇺🇸 US (NYSE/NASDAQ)</option>
+          <option value="BR">🇧🇷 Brasil (B3)</option>
+          <option value="PT">🇵🇹 Portugal (Lisboa)</option>
+          <option value="EU">🇪🇺 Europa</option>
+        </select>
       </div>
-      <section class="search-panel">
-        <div class="field">
-          <label for="source">Fonte</label>
-          <select id="source">
-            <option value="finviz">Finviz</option>
-            <option value="yahoo">Yahoo</option>
-            <option value="google_finance">Google Finance</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="market">Mercado</label>
-          <select id="market">
-            <option value="US">🇺🇸 US (Americano)</option>
-            <option value="EU">🇪🇺 EU (Europeu)</option>
-            <option value="PT">🇵🇹 PT (Português)</option>
-            <option value="BR">🇧🇷 BR (Brasileiro)</option>
-          </select>
-        </div>
-        <div class="field field-grow">
-          <label for="ticker">Ticker</label>
-          <input
-            id="ticker"
-            type="text"
-            placeholder="Ex: AAPL, petr4 (BR auto → PETR4.SA)"
-          />
-        </div>
-        <div class="actions">
-          <button id="searchBtn">🔍 Buscar (Demo)</button>
-        </div>
-      </section>
-      <section class="quick-examples">
-        <span>Exemplos:</span>
-        <button class="chip" data-ticker="AAPL">AAPL</button>
-        <button class="chip" data-ticker="PETR4">PETR4</button>
-        <button class="chip" data-ticker="NOS">NOS</button>
-        <button class="chip" data-ticker="SAP">SAP</button>
-      </section>
-      <section>
-        <div id="status" class="status">À espera de demo...</div>
-        <pre id="result" class="result-box">{}</pre>
-      </section>
-    </main>
-    <script>
-      // Mock demo data
-      const demoData = {
-        AAPL: {
-          ticker: "AAPL",
-          name: "Apple Inc",
-          price: 226.84,
-          change: "+1.23 (+0.55%)",
-          volume: "41.2M",
-          marketCap: "$3.45T",
-        },
-        NOS: {
-          ticker: "NOS",
-          name: "NOS, SGPS, S.A.",
-          price: "3.72",
-          change: "-0.04 (-1.06%)",
-          volume: "1.23M",
-          marketCap: "€1.52B",
-        },
-        PETR4: {
-          ticker: "PETR4.SA",
-          name: "Petróleo Brasileiro S.A. - Petrobras",
-          price: "37.24",
-          change: "+0.85 (+2.33%)",
-          volume: "102.4M",
-          marketCap: "R$492.6B",
-        },
-        SAP: {
-          ticker: "SAP.DE",
-          name: "SAP SE",
-          price: "189.45",
-          change: "-1.20 (-0.63%)",
-          volume: "2.1M",
-          marketCap: "€220.5B",
-        },
-      };
+      <div class="field">
+        <label for="ticker">Ticker</label>
+        <input id="ticker" type="text" placeholder="Ex: AAPL, PETR4, NOS, SAP" />
+      </div>
+      <div class="actions">
+        <button id="searchBtn">🔍 Buscar</button>
+      </div>
+    </div>
 
-      const mockSuggestions = {
-        AAPL: [{ ticker: "AAPL", name: "Apple Inc" }],
-        petr: [{ ticker: "PETR4.SA", name: "Petrobras" }],
-        nos: [{ ticker: "NOS", name: "NOS SGPS" }],
-        sap: [{ ticker: "SAP.DE", name: "SAP SE" }],
-      };
+    <div class="quick-examples">
+      <span>Exemplos:</span>
+      <button class="chip" data-ticker="AAPL" data-market="US">AAPL</button>
+      <button class="chip" data-ticker="PETR4" data-market="BR">PETR4</button>
+      <button class="chip" data-ticker="NOS" data-market="PT">NOS</button>
+      <button class="chip" data-ticker="SAP" data-market="EU">SAP</button>
+    </div>
 
-      const sourceEl = document.getElementById("source");
-      const marketEl = document.getElementById("market");
-      const tickerEl = document.getElementById("ticker");
-      const searchBtn = document.getElementById("searchBtn");
-      const resultEl = document.getElementById("result");
-      const statusEl = document.getElementById("status");
+    <div id="status" class="status">Ready to search! (Enter or click)</div>
+    <pre id="result" class="result-box">{"message": "Teste AAPL para ver dados reais!"}</pre>
+  </div>
 
-      // Mock autocomplete
-      tickerEl.addEventListener("input", () => {
-        const query = tickerEl.value.toLowerCase().trim();
-        const dropdown = document.querySelector("#suggestions");
-        if (dropdown) dropdown.remove();
-        if (query.length < 3) return;
-        if (mockSuggestions[query]) {
-          showSuggestions(mockSuggestions[query]);
+  <script>
+    // Free FMP API Demo Key (public, rate-limited) - Replace with own if needed
+    const FMP_API_KEY = 'demo';  // Works for demo endpoints
+    const FMP_BASE = 'https://financialmodelingprep.com/api/v3';
+
+    const tickerEl = document.getElementById('ticker');
+    const marketEl = document.getElementById('market');
+    const searchBtn = document.getElementById('searchBtn');
+    const resultEl = document.getElementById('result');
+    const statusEl = document.getElementById('status');
+    const chips = document.querySelectorAll('.chip');
+
+    let debounceTimer;
+
+    async function searchQuote(ticker, market) {
+      statusEl.textContent = `Searching ${ticker} (${market})...`;
+      statusEl.className = 'status loading';
+      resultEl.textContent = 'Loading...';
+
+      // Normalize ticker
+      let symbol = ticker.toUpperCase();
+      if (market === 'BR' && !symbol.endsWith('.SA')) symbol += '.SA';
+      if (market === 'PT' && !symbol.endsWith('.LS')) symbol += '.LS';
+      if (market === 'EU' && symbol === 'SAP') symbol = 'SAP.DE';
+
+      try {
+        // Profile first
+        const profileUrl = `${FMP_BASE}/profile/${symbol}?apikey=${FMP_API_KEY}`;
+        const profileRes = await fetch(profileUrl);
+        let data = await profileRes.json();
+
+        if (data.length === 0 || data[0].companyName === undefined) {
+          // Fallback quote
+          const quoteUrl = `${FMP_BASE}/quote/${symbol}?apikey=${FMP_API_KEY}`;
+          const quoteRes = await fetch(quoteUrl);
+          data = await quoteRes.json();
+          if (data.length === 0) throw new Error('No data');
+          data = data.map(q => ({ symbol: q.symbol, price: q.price, ...q }));
         }
-      });
 
-      function showSuggestions(sugs) {
-        const dropdown = document.createElement("div");
-        dropdown.id = "suggestions";
-        dropdown.className = "suggestions-dropdown";
-        sugs.forEach((sug) => {
-          const item = document.createElement("div");
-          item.className = "suggestion-item";
-          item.textContent = `${sug.ticker} - ${sug.name}`;
-          item.onclick = () => {
-            tickerEl.value = sug.ticker;
-            dropdown.remove();
-            searchDemo();
-          };
-          dropdown.appendChild(item);
-        });
-        tickerEl.parentNode.appendChild(dropdown);
-      }
-
-      // Hide dropdown
-      document.addEventListener("click", (e) => {
-        if (!tickerEl.contains(e.target)) {
-          const dropdown = document.querySelector("#suggestions");
-          if (dropdown) dropdown.remove();
+        // Enhance with more data if profile
+        if (data[0].companyName) {
+          const symbol = data[0].symbol;
+          const keyUrl = `${FMP_BASE}/key-metrics-ttm/${symbol}?apikey=${FMP_API_KEY}`;
+          const keyRes = await fetch(keyUrl);
+          const keys = await keyRes.json();
+          if (keys.length > 0) data[0].metrics = keys[0];
         }
-      });
 
-      function searchDemo() {
-        const ticker = tickerEl.value.trim().toUpperCase();
-        statusEl.textContent = `Demo: Simulando pesquisa ${ticker}...`;
-        resultEl.textContent = "Carregando dados demo...";
-        setTimeout(() => {
-          const data = demoData[ticker] || {
-            error: `Demo dados para ${ticker} não disponíveis. Tenta AAPL, NOS, PETR4, SAP.`,
-            timestamp: new Date().toISOString(),
-          };
-          statusEl.textContent = `Demo concluído para ${ticker}! (Dados simulados)`;
-          resultEl.textContent = JSON.stringify(data, null, 2);
-        }, 800);
+        statusEl.textContent = `✅ Data found for ${symbol}`;
+        statusEl.className = 'status';
+        resultEl.textContent = JSON.stringify(data[0], null, 2);
+        resultEl.innerHTML = resultEl.textContent.replace(/("price":\s*[-.\d]+)/g, '<span class="price-highlight">$1</span>');
+      } catch (err) {
+        statusEl.textContent = `❌ ${err.message} - Try AAPL, PETR4.SA, NOS.LS`;
+        statusEl.className = 'status error';
+        resultEl.textContent = JSON.stringify({ error: err.message, try: ['AAPL', 'PETR4', 'NOS'] }, null, 2);
       }
+    }
 
-      searchBtn.addEventListener("click", searchDemo);
-      tickerEl.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") searchDemo();
-      });
+    // Events
+    function debounce(fn, ms) {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(fn, ms);
+    }
 
-      // Quick chips
-      document.querySelectorAll(".chip").forEach((chip) => {
-        chip.addEventListener("click", () => {
-          tickerEl.value = chip.dataset.ticker;
-          searchDemo();
-        });
+    tickerEl.addEventListener('input', () => debounce(() => {}, 300));
+    searchBtn.addEventListener('click', () => searchQuote(tickerEl.value, marketEl.value));
+    tickerEl.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchQuote(tickerEl.value, marketEl.value); });
+
+    chips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        tickerEl.value = chip.dataset.ticker;
+        marketEl.value = chip.dataset.market || 'US';
+        searchQuote(chip.dataset.ticker, chip.dataset.market || 'US');
       });
-    </script>
-  </body>
+    });
+
+    // Auto-search example on load
+    setTimeout(() => {
+      tickerEl.value = 'AAPL';
+      marketEl.value = 'US';
+      // searchQuote('AAPL', 'US');
+    }, 500);
+  </script>
+</body>
 </html>
