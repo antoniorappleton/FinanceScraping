@@ -170,3 +170,36 @@ exportSheetsBtn.addEventListener("click", async () => {
         setTimeout(() => { exportStatus.style.display = 'none'; }, 5000);
     }
 });
+
+const syncFirebaseBtn = document.getElementById("syncFirebaseBtn");
+
+syncFirebaseBtn.addEventListener("click", async () => {
+    if (!lastBatchData) return;
+
+    syncFirebaseBtn.disabled = true;
+    syncFirebaseBtn.textContent = 'Sincronizando...';
+    exportStatus.style.display = 'block';
+    exportStatus.innerHTML = '<span style="color: #94a3b8;">Sincronizando dados com o Firebase...</span>';
+
+    try {
+        const response = await fetch('/api/sync-firebase', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(lastBatchData)
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            exportStatus.innerHTML = `<span style="color: #fbbf24;">✓ Sucesso! Batch guardado no Firestore.</span>`;
+        } else {
+            exportStatus.innerHTML = `<span style="color: #f43f5e;">✕ Erro: ${result.error || 'Falha na sincronização'}</span>`;
+        }
+    } catch (error) {
+        exportStatus.innerHTML = `<span style="color: #f43f5e;">✕ Erro de conexão com o terminal.</span>`;
+    } finally {
+        syncFirebaseBtn.disabled = false;
+        syncFirebaseBtn.textContent = 'Sincronizar Cloud';
+        setTimeout(() => { exportStatus.style.display = 'none'; }, 5000);
+    }
+});

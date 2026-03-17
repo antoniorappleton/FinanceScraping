@@ -14,6 +14,7 @@ from scraper.transformer import (
     flatten_scrape_result,
     build_ordered_columns
 )
+from scraper.firebase_manager import firebase_manager
 
 # Load environment variables
 load_dotenv()
@@ -212,6 +213,24 @@ def export_sheets():
         return jsonify({
             "error": "Erro ao exportar para Google Sheets.",
             "details": str(exc)
+        }), 500
+
+
+@app.route("/api/sync-firebase", methods=["POST"])
+def sync_firebase():
+    data = request.get_json(silent=True) or {}
+    
+    if not data or "rows" not in data:
+        return jsonify({"error": "Nenhum dado para sincronizar."}), 400
+        
+    success = firebase_manager.save_batch(data)
+    
+    if success:
+        return jsonify({"status": "success", "message": "Batch sincronizado com o Firebase."})
+    else:
+        return jsonify({
+            "error": "Erro ao sincronizar com o Firebase.",
+            "details": "Verifique se o caminho para o ficheiro de credenciais no .env está correto."
         }), 500
 
 
