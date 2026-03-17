@@ -160,7 +160,8 @@ exportSheetsBtn.addEventListener("click", async () => {
         if (response.ok) {
             exportStatus.innerHTML = `<span style="color: #10b981;">✓ Sucesso! Linhas adicionadas à Sheet.</span>`;
         } else {
-            exportStatus.innerHTML = `<span style="color: #f43f5e;">✕ Erro: ${result.error || 'Falha na exportação'}</span>`;
+            const errorMsg = result.details ? `${result.error} (${result.details})` : (result.error || 'Falha na exportação');
+            exportStatus.innerHTML = `<span style="color: #f43f5e;">✕ Erro: ${errorMsg}</span>`;
         }
     } catch (error) {
         exportStatus.innerHTML = `<span style="color: #f43f5e;">✕ Erro de conexão com o terminal.</span>`;

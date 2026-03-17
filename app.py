@@ -210,9 +210,13 @@ def export_sheets():
         
         return jsonify(response.json())
     except Exception as exc:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"❌ Error in export_sheets: {error_details}")
         return jsonify({
             "error": "Erro ao exportar para Google Sheets.",
-            "details": str(exc)
+            "details": str(exc),
+            "traceback": error_details
         }), 500
 
 
