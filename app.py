@@ -192,10 +192,11 @@ def search_batch():
 @app.route("/api/export-sheets", methods=["POST"])
 def export_sheets():
     # Reload .env to ensure we pick up any recent manual edits
-    load_dotenv()
+    load_dotenv(override=True)
     
     data = request.get_json(silent=True) or {}
     webhook_url = os.getenv("G_SHEETS_WEBHOOK_URL")
+    print(f"DEBUG: Using webhook URL: {webhook_url[:40]}...")
     
     if not webhook_url or "COLE_O_URL" in webhook_url:
         return jsonify({"error": "URL da Google Sheet não configurado no .env"}), 400
@@ -222,6 +223,8 @@ def export_sheets():
 
 @app.route("/api/sync-firebase", methods=["POST"])
 def sync_firebase():
+    # Reload .env to pick up credentials path changes
+    load_dotenv(override=True)
     data = request.get_json(silent=True) or {}
     
     if not data or "rows" not in data:
