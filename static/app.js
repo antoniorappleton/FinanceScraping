@@ -1,140 +1,138 @@
 const sourceEl = document.getElementById("source");
 const marketEl = document.getElementById("market");
-const tickerEl = document.getElementById("ticker");
-const searchBtn = document.getElementById("searchBtn");
-const resultEl = document.getElementById("result");
+const tickersEl = document.getElementById("tickers");
+const batchSearchBtn = document.getElementById("batchSearchBtn");
 const statusEl = document.getElementById("status");
-const chips = document.querySelectorAll(".chip");
+const summaryEl = document.getElementById("summary");
+const errorListEl = document.getElementById("errorList");
+const tableHeaderEl = document.getElementById("tableHeader");
+const tableBodyEl = document.getElementById("tableBody");
+const statusSection = document.getElementById("statusSection");
+const errorSection = document.getElementById("errorSection");
+const resultsSection = document.getElementById("resultsSection");
+const exportJsonBtn = document.getElementById("exportJsonBtn");
 
-let debounceTimer;
-const DEBOUNCE_MS = 300;
+let lastBatchData = null;
 
-// Search ticker suggestions
-async function fetchSuggestions(query, source, market) {
-  try {
-    const response = await fetch("/api/search_ticker", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query, source, market }),
-    });
-    const data = await response.json();
-    return data.suggestions || [];
-  } catch {
-    return [];
-  }
-}
-
-// Show suggestions dropdown
-function showSuggestions(suggestions) {
-  // Remove existing dropdown
-  const existing = document.querySelector("#suggestions");
-  if (existing) existing.remove();
-
-  if (suggestions.length === 0) return;
-
-  const dropdown = document.createElement("div");
-  dropdown.id = "suggestions";
-  dropdown.className = "suggestions-dropdown";
-  suggestions.forEach((sug) => {
-    const item = document.createElement("div");
-    item.className = "suggestion-item";
-    item.textContent = `${sug.ticker} - ${sug.name}`;
-    item.onclick = () => {
-      tickerEl.value = sug.ticker;
-      dropdown.remove();
-      searchTicker();
-    };
-    dropdown.appendChild(item);
-  });
-  tickerEl.parentNode.appendChild(dropdown);
-}
-
-async function searchTicker() {
-  const ticker = tickerEl.value.trim().toUpperCase();
+async function processBatch() {
+  const tickers = tickersEl.value.trim();
   const source = sourceEl.value;
   const market = marketEl.value;
 
-  if (!ticker) {
-    statusEl.textContent = "Introduz um ticker.";
+  if (!tickers) {
+    alert("Por favor, introduz pelo menos um ticker.");
     return;
   }
 
-  statusEl.textContent = `A pesquisar ${ticker} em ${source} (${market})...`;
-  resultEl.textContent = "A carregar...";
+  // Reset UI
+  statusSection.style.display = "block";
+  errorSection.style.display = "none";
+  resultsSection.style.display = "none";
+  statusEl.textContent = "A processar lote... Isto pode demorar dependendo da quantidade de tickers.";
+  summaryEl.innerHTML = "";
+  errorListEl.innerHTML = "";
+  batchSearchBtn.disabled = true;
 
   try {
-    const response = await fetch("/api/search", {
+    const response = await fetch("/api/search-batch", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        ticker,
-        source,
-        market,
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tickers, source, market }),
     });
 
-    const data = await response.json();
-
-    if (data.suggestions && data.suggestions.length > 0) {
-      let msg = data.error ? `${data.error} Sugestões:\n` : "Sugestões:\n";
-      data.suggestions.slice(0, 3).forEach((s) => {
-        msg += `- ${s.ticker}: ${s.name}\n`;
-      });
-      statusEl.textContent = msg;
-    } else {
-      statusEl.textContent = data.error || `Pesquisa concluída para ${ticker}.`;
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erro no servidor");
     }
 
-    resultEl.textContent = JSON.stringify(data, null, 2);
+    const data = await response.json();
+    lastBatchData = data;
+    renderBatchResult(data);
   } catch (error) {
-    resultEl.textContent = JSON.stringify(
-      {
-        error: "Erro de comunicação com o backend.",
-        details: String(error),
-      },
-      null,
-      2,
-    );
-    statusEl.textContent = "Falha de comunicação.";
+    statusEl.innerHTML = `<span class="error-text">Erro: ${error.message}</span>`;
+  } finally {
+    batchSearchBtn.disabled = false;
   }
 }
 
-// Debounced autocomplete
-tickerEl.addEventListener("input", () => {
-  clearTimeout(debounceTimer);
-  const query = tickerEl.value.trim();
-  if (query.length < 2) return;
+function renderBatchResult(data) {
+  statusEl.textContent = "Processamento concluído.";
+  
+  // Render Summary
+  summaryEl.innerHTML = `
+    <div class="stat">
+      <span class="stat-label">Total Pedidos</span>
+      <span class="stat-value">${data.total_requested}</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Sucesso</span>
+      <span class="stat-value success">${data.total_success}</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Erros</span>
+      <span class="stat-value ${data.total_errors > 0 ? 'error' : ''}">${data.total_errors}</span>
+    </div>
+  `;
 
-  debounceTimer = setTimeout(async () => {
-    const suggestions = await fetchSuggestions(
-      query,
-      sourceEl.value,
-      marketEl.value,
-    );
-    showSuggestions(suggestions);
-  }, DEBOUNCE_MS);
-});
-
-searchBtn.addEventListener("click", searchTicker);
-tickerEl.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") {
-    searchTicker();
+  // Render Errors
+  if (data.errors && data.errors.length > 0) {
+    errorSection.style.display = "block";
+    data.errors.forEach(err => {
+      const li = document.createElement("li");
+      li.innerHTML = `<strong>${err.ticker}:</strong> ${err.error}`;
+      errorListEl.appendChild(li);
+    });
   }
-});
 
-chips.forEach((chip) => {
+  // Render Table
+  if (data.rows && data.rows.length > 0) {
+    resultsSection.style.display = "block";
+    
+    // Header
+    tableHeaderEl.innerHTML = "";
+    data.columns.forEach(col => {
+      const th = document.createElement("th");
+      th.textContent = col;
+      tableHeaderEl.appendChild(th);
+    });
+
+    // Body
+    tableBodyEl.innerHTML = "";
+    data.rows.forEach(row => {
+      const tr = document.createElement("tr");
+      data.columns.forEach(col => {
+        const td = document.createElement("td");
+        let val = row[col] || "-";
+        
+        // Special formatting for URL
+        if (col === 'url' && val !== '-') {
+            td.innerHTML = `<a href="${val}" target="_blank">Link</a>`;
+        } else {
+            td.textContent = val;
+        }
+        tr.appendChild(td);
+      });
+      tableBodyEl.appendChild(tr);
+    });
+  }
+}
+
+batchSearchBtn.addEventListener("click", processBatch);
+
+// Quick examples logic
+document.querySelectorAll(".chip").forEach(chip => {
   chip.addEventListener("click", () => {
-    tickerEl.value = chip.dataset.ticker;
-    searchTicker();
+    tickersEl.value = chip.dataset.ticker.replace(/, /g, '\n');
   });
 });
 
-// Hide suggestions on outside click
-document.addEventListener("click", (e) => {
-  if (!tickerEl.contains(e.target) && !e.target.matches("#suggestions *")) {
-    const dropdown = document.querySelector("#suggestions");
-    if (dropdown) dropdown.remove();
-  }
+exportJsonBtn.addEventListener("click", () => {
+  if (!lastBatchData) return;
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(lastBatchData, null, 2));
+  const downloadAnchorNode = document.createElement('a');
+  downloadAnchorNode.setAttribute("href", dataStr);
+  downloadAnchorNode.setAttribute("download", `batch_export_${new Date().getTime()}.json`);
+  document.body.appendChild(downloadAnchorNode);
+  downloadAnchorNode.click();
+  downloadAnchorNode.remove();
 });

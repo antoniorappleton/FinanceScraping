@@ -5,39 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Market Scraper Terminal</title>
     <link rel="stylesheet" href="/static/style.css" />
-    <style>
-      .suggestions-dropdown {
-        position: absolute;
-        background: white;
-        border: 1px solid #ccc;
-        border-top: none;
-        max-height: 200px;
-        overflow-y: auto;
-        z-index: 1000;
-        width: 100%;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-      }
-      .suggestion-item {
-        padding: 8px 12px;
-        cursor: pointer;
-      }
-      .suggestion-item:hover {
-        background: #f0f0f0;
-      }
-      .field {
-        position: relative;
-      }
-    </style>
   </head>
   <body>
     <main class="container">
-      <h1>Market Scraper Terminal</h1>
-      <p class="subtitle">
-        Escolhe a fonte, o mercado e pesquisa um ticker (auto-complete
-        disponível).
-      </p>
+      <header>
+        <h1>Market Scraper Terminal</h1>
+        <p class="subtitle">
+          Insere um ou muitos tickers (um por linha) e processa em lote.
+        </p>
+      </header>
 
-      <section class="search-panel">
+      <section class="controls-panel">
         <div class="field">
           <label for="source">Fonte</label>
           <select id="source">
@@ -57,34 +35,50 @@
             {% endfor %}
           </select>
         </div>
+      </section>
 
-        <div class="field field-grow">
-          <label for="ticker">Ticker</label>
-          <input
-            id="ticker"
-            type="text"
-            placeholder="Ex: AAPL, petr4 (BR auto → PETR4.SA)"
-          />
+      <section class="batch-input">
+        <div class="field">
+          <label for="tickers">Tickers (um por linha ou separados por vírgula)</label>
+          <textarea id="tickers" rows="8" placeholder="Ex: AAPL&#10;MSFT&#10;NVDA"></textarea>
         </div>
-
         <div class="actions">
-          <button id="searchBtn">Buscar</button>
+          <button id="batchSearchBtn" class="btn-primary">Processar tickers</button>
         </div>
       </section>
 
       <section class="quick-examples">
         <span>Exemplos rápidos:</span>
-        <button class="chip" data-ticker="AAPL">AAPL (US)</button>
-        <button class="chip" data-ticker="PETR4">PETR4 (BR)</button>
-        <button class="chip" data-ticker="NOS">NOS (PT)</button>
-        <button class="chip" data-ticker="SAP">SAP (EU)</button>
+        <button class="chip" data-ticker="AAPL, MSFT, NVDA, TSLA, AMZN">Mega Tech (US)</button>
+        <button class="chip" data-ticker="NOS, SON, GALP, EDP">PSI (PT)</button>
+        <button class="chip" data-ticker="PETR4, VALE3, ITUB4">B3 (BR)</button>
       </section>
 
-      <section>
-        <div id="status" class="status">
-          À espera de pesquisa... (Ctrl+Enter para buscar)
+      <section id="statusSection" class="status-section" style="display: none;">
+        <div id="status" class="status">À espera de processamento...</div>
+        <div id="summary" class="summary-grid">
+          <!-- Stats injected here -->
         </div>
-        <pre id="result" class="result-box">{}</pre>
+      </section>
+
+      <section id="errorSection" class="error-section" style="display: none;">
+        <h3>Erros Isolados</h3>
+        <ul id="errorList"></ul>
+      </section>
+
+      <section id="resultsSection" class="results-section" style="display: none;">
+        <div class="table-header">
+          <h3>Resultados</h3>
+          <button id="exportJsonBtn" class="btn-secondary">Exportar JSON</button>
+        </div>
+        <div class="table-wrapper">
+          <table id="resultsTable">
+            <thead>
+              <tr id="tableHeader"></tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
       </section>
     </main>
 

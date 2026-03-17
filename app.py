@@ -1,10 +1,16 @@
 import json
+import time
 from datetime import datetime
 from pathlib import Path
 
 from flask import Flask, jsonify, render_template, request
 
 from scraper.registry import SCRAPER_REGISTRY, SUPPORTED_MARKETS
+from scraper.transformer import (
+    normalize_tickers_from_text,
+    flatten_scrape_result,
+    build_ordered_columns
+)
 
 app = Flask(__name__)
 
@@ -105,6 +111,75 @@ def search():
         "suggestions": suggestions,
         "try_tickers": [s.get("ticker") for s in suggestions[:3]]
     }), 500 if "NotImplementedError" not in error_msg else 501
+
+
+@app.route("/api/search-batch", methods=["POST"])
+def search_batch():
+    data = request.get_json(silent=True) or {}
+    
+    raw_tickers = str(data.get("tickers", "")).strip()
+    source = str(data.get("source", "")).strip()
+    market = str(data.get("market", "")).strip().upper()
+    
+    if not raw_tickers:
+        return jsonify({"error": "Nenhum ticker fornecido."}), 400
+        
+    if source not in SCRAPER_REGISTRY:
+        return jsonify({"error": "Fonte inválida."}), 400
+        
+    if market not in SUPPORTED_MARKETS:
+        return jsonify({"error": "Mercado inválido."}), 400
+        
+    tickers = normalize_tickers_from_text(raw_tickers)
+    scraper = SCRAPER_REGISTRY[source]
+    
+    rows = []
+    errors = []
+    
+    for i, ticker in enumerate(tickers):
+        # Apply delay between requests (except the first)
+        if i > 0:
+            time.sleep(1.5) # Configurable delay 1-2s
+            
+        try:
+            result = scraper.scrape_quote(ticker=ticker, market=market)
+            flat_row = flatten_scrape_result(result)
+            rows.append(flat_row)
+        except Exception as exc:
+            errors.append({
+                "ticker": ticker,
+                "error": str(exc)
+            })
+            
+    columns = build_ordered_columns(rows)
+    
+    payload = {
+        "source": source,
+        "market": market,
+        "tickers_requested": tickers,
+        "total_requested": len(tickers),
+        "total_success": len(rows),
+        "total_errors": len(errors),
+        "columns": columns,
+        "rows": rows,
+        "errors": errors,
+        "timestamp": datetime.now().isoformat()
+    }
+    
+    # Persist batch result
+    try:
+        output_dir = Path("data/raw")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_file = output_dir / f"batch_{source}_{market}_{timestamp_str}.json"
+        
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        # Don't fail the request if persistence fails, but log it
+        print(f"Error saving batch: {e}")
+        
+    return jsonify(payload)
 
 
 if __name__ == "__main__":
