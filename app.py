@@ -1,8 +1,11 @@
 import json
+import os
 import time
 from datetime import datetime
 from pathlib import Path
 
+import requests
+from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request
 
 from scraper.registry import SCRAPER_REGISTRY, SUPPORTED_MARKETS
@@ -11,6 +14,9 @@ from scraper.transformer import (
     flatten_scrape_result,
     build_ordered_columns
 )
+
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__)
 
@@ -180,6 +186,30 @@ def search_batch():
         print(f"Error saving batch: {e}")
         
     return jsonify(payload)
+
+
+@app.route("/api/export-sheets", methods=["POST"])
+def export_sheets():
+    data = request.get_json(silent=True) or {}
+    webhook_url = os.getenv("G_SHEETS_WEBHOOK_URL")
+    
+    if not webhook_url or "COLE_O_URL" in webhook_url:
+        return jsonify({"error": "URL da Google Sheet não configurado no .env"}), 400
+        
+    if not data or "rows" not in data:
+        return jsonify({"error": "Nenhum dado para exportar."}), 400
+        
+    try:
+        # Send data to Apps Script Webhook
+        response = requests.post(webhook_url, json=data, timeout=30)
+        response.raise_for_status()
+        
+        return jsonify(response.json())
+    except Exception as exc:
+        return jsonify({
+            "error": "Erro ao exportar para Google Sheets.",
+            "details": str(exc)
+        }), 500
 
 
 if __name__ == "__main__":

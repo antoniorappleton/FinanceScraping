@@ -136,3 +136,37 @@ exportJsonBtn.addEventListener("click", () => {
   downloadAnchorNode.click();
   downloadAnchorNode.remove();
 });
+
+const exportSheetsBtn = document.getElementById("exportSheetsBtn");
+const exportStatus = document.getElementById("exportStatus");
+
+exportSheetsBtn.addEventListener("click", async () => {
+    if (!lastBatchData) return;
+
+    exportSheetsBtn.disabled = true;
+    exportSheetsBtn.textContent = 'Enviando...';
+    exportStatus.style.display = 'block';
+    exportStatus.innerHTML = '<span style="color: #94a3b8;">Enviando dados para a Google Sheet...</span>';
+
+    try {
+        const response = await fetch('/api/export-sheets', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(lastBatchData)
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            exportStatus.innerHTML = `<span style="color: #10b981;">✓ Sucesso! Linhas adicionadas à Sheet.</span>`;
+        } else {
+            exportStatus.innerHTML = `<span style="color: #f43f5e;">✕ Erro: ${result.error || 'Falha na exportação'}</span>`;
+        }
+    } catch (error) {
+        exportStatus.innerHTML = `<span style="color: #f43f5e;">✕ Erro de conexão com o terminal.</span>`;
+    } finally {
+        exportSheetsBtn.disabled = false;
+        exportSheetsBtn.textContent = 'Exportar Sheets';
+        setTimeout(() => { exportStatus.style.display = 'none'; }, 5000);
+    }
+});
