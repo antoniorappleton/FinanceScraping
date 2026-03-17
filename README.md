@@ -67,13 +67,42 @@ Dados são salvos automaticamente em formato JSON na pasta `data/raw/`.
 
 ## 🚀 Uso
 
-### Via Interface Web
-1. Selecione **Fonte** (finviz, yahoo, google_finance)
-2. Selecione **Mercado** (US, EU, PT, BR)
-3. Insira **Ticker** (ex: AAPL, NOS, VALE3)
-4. Clique **Pesquisar**
+### Via Interface Web (Terminal de Lote)
 
-### Via API
+1. **Selecionar Contexto**: 
+   - Escolha a **Fonte** (atualmente `finviz` é a recomendada para a Fase 1).
+   - Escolha o **Mercado** (ex: `US` para tickers americanos).
+
+2. **Inserir Tickers**: 
+   - No campo de texto grande, cole um ou vários tickers.
+   - Pode inserir um por linha ou separados por vírgula (ex: `AAPL`, `MSFT`, `NVDA`).
+
+3. **Processar**: 
+   - Clique em **"Processar tickers"**.
+   - A aplicação irá percorrer a lista sequencialmente com um pequeno delay (1.5s) para evitar bloqueios.
+
+4. **Visualizar e Analisar**: 
+   - Veja o resumo (sucessos/erros) no topo.
+   - Analise os resultados na tabela comparativa (use o scroll horizontal se necessário).
+   - Erros individuais aparecem numa secção separada sem interromper o lote.
+
+5. **Guardar/Exportar**: 
+   - Os dados são salvos automaticamente em `data/raw` como um ficheiro JSON único do lote.
+   - Use o botão **"Exportar JSON"** para descarregar o resultado atual.
+
+### Via API (Programático)
+
+#### Batch Search
+```
+POST /api/search-batch
+{
+  "tickers": "AAPL, MSFT, NVDA",
+  "source": "finviz",
+  "market": "US"
+}
+```
+
+#### Pesquisa Única
 ```
 POST /api/search
 {
