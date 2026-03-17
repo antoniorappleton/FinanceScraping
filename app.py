@@ -190,6 +190,9 @@ def search_batch():
 
 @app.route("/api/export-sheets", methods=["POST"])
 def export_sheets():
+    # Reload .env to ensure we pick up any recent manual edits
+    load_dotenv()
+    
     data = request.get_json(silent=True) or {}
     webhook_url = os.getenv("G_SHEETS_WEBHOOK_URL")
     
