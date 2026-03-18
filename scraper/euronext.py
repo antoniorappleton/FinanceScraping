@@ -120,7 +120,13 @@ class EuronextScraper(BaseScraper):
                                 metrics["Market Cap"] = val
                             elif "volume" in key and "médio" not in key:
                                 metrics["Volume"] = val
-                            elif "abertura" in key:
+                            elif "receita" in key or "turnover" in key:
+                                metrics["Turnover"] = val
+                            elif "transações" in key or "trades" in key:
+                                metrics["Trades"] = val
+                            elif "vwap" in key:
+                                metrics["VWAP"] = val
+                            elif "abertura" in key or "abrir" in key:
                                 metrics["Open"] = val
                             elif "fecho anterior" in key:
                                 metrics["Prev Close"] = val
@@ -128,6 +134,14 @@ class EuronextScraper(BaseScraper):
                                 metrics["Day High"] = val
                             elif "mínimo" in key and "dia" in key:
                                 metrics["Day Low"] = val
+                            elif "alta" in key: # AJAX "Alta"
+                                metrics["Day High"] = val
+                            elif "baixa" in key: # AJAX "Baixa"
+                                metrics["Day Low"] = val
+                            elif "52 semanas" in key:
+                                metrics["52w Range"] = val
+                            elif "limite" in key:
+                                metrics["Limits"] = val
         except Exception as e:
             print(f"Error fetching metrics for {ticker}: {e}")
 
