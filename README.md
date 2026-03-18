@@ -10,19 +10,59 @@ Aplicação local para recolha massiva de dados financeiros e exportação diret
 
 ---
 
-## 🛠️ Como Começar
+## 🛠️ Configuração Inicial
 
-### 1. Instalar (Windows)
+Siga estes passos para preparar o ambiente em qualquer PC.
+
+### 1. Pré-requisitos
+- **Python 3.10+** instalado.
+- **Git** (opcional, para clonar o repositório).
+
+### 2. Instalação e Ambiente Virtual
+No terminal (PowerShell ou CMD), execute:
 ```powershell
+# Criar ambiente virtual
 python -m venv .venv
-.\.venv\Scripts\pip install -r requirements.txt
+
+# Ativar ambiente virtual
+.\.venv\Scripts\activate
+
+# Instalar dependências
+pip install -r requirements.txt
 ```
 
-### 2. Abrir a Aplicação
-```powershell
-.\.venv\Scripts\python app.py
+### 3. Configuração do Ficheiro .env
+Crie um ficheiro chamado `.env` na raiz do projeto (ou edite o existente) com o seguinte conteúdo:
+```env
+G_SHEETS_WEBHOOK_URL=SEU_URL_DO_APPS_SCRIPT
+FIREBASE_SERVICE_ACCOUNT_JSON=C:\CAMINHO\PARA\O\SEU\FICHEIRO_FIREBASE.json
 ```
-Depois aceda a: **http://127.0.0.1:5000**
+
+### 4. Abrir a Aplicação
+```powershell
+python app.py
+```
+Aceda a: **http://127.0.0.1:5000**
+
+---
+
+## 📊 Configuração de Integrações
+
+### Google Sheets (Opcional)
+Para exportar dados diretamente para uma folha de cálculo:
+1. Na sua Google Sheet: **Extensões** -> **Apps Script**.
+2. Copie o conteúdo de `docs/googlesheet_webhook.gs` para o editor.
+3. **Implementar** -> **Nova implementação** -> Escolha **Aplicação Web**.
+4. Configuração: Executar como **Eu**, Acesso: **Qualquer pessoa**.
+5. Copie o URL gerado e coloque-o no seu `.env` em `G_SHEETS_WEBHOOK_URL`.
+
+### Firebase (Opcional)
+Para sincronizar dados com a cloud:
+1. Aceda à [Consola do Firebase](https://console.firebase.google.com/).
+2. Crie um projeto e adicione uma base de dados **Firestore**.
+3. Vá a **Definições do Projeto** -> **Contas de Serviço**.
+4. Clique em **Gerar nova chave privada** para descarregar o ficheiro JSON.
+5. Guarde o JSON numa pasta segura e coloque o caminho completo no seu `.env` em `FIREBASE_SERVICE_ACCOUNT_JSON`.
 
 ---
 
@@ -38,24 +78,9 @@ Depois aceda a: **http://127.0.0.1:5000**
 
 ---
 
-## 📊 Configurar Google Sheets (Opcional)
-
-Para enviar dados para a sua própria Sheet:
-1. Abra a sua Google Sheet -> **Extensões** -> **Apps Script**.
-2. Cole o código que está em `docs/googlesheet_webhook.gs`.
-3. Clique em **Implementar** -> **Nova implementação** -> **Aplicação Web**.
-4. Configure: Executar como **Eu**, Acesso: **Qualquer pessoa**.
-5. Copie o URL gerado e coloque-o no seu ficheiro `.env`:
-   `G_SHEETS_WEBHOOK_URL=SEU_URL_AQUI`
-
----
-
----
-
 ## 📄 Notas & Licença
 - **Delays**: A app aplica um delay de 1.5s entre tickers para evitar bloqueios.
 - **Estrutura**: Os ficheiros raw ficam em `data/raw/`.
 - **Licença**: MIT.
 
-**Autor**: [Antonio Appleton](https://github.com/antoniorappleton)
 
