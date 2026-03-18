@@ -53,5 +53,44 @@ class FirebaseManager:
             print(f"❌ Firebase: Erro ao guardar batch: {e}")
             return False
 
+    def get_all_tickers(self):
+        """
+        Lê todos os tickers da coleção 'tickers'.
+        """
+        if not self.db:
+            print("⚠️ Firebase: Base de dados não inicializada.")
+            return []
+
+        try:
+            docs = self.db.collection("tickers").stream()
+            tickers = []
+            for d in docs:
+                data = d.to_dict()
+                if "ticker" in data:
+                    tickers.append(data["ticker"].upper())
+            return tickers
+        except Exception as e:
+            print(f"❌ Firebase: Erro ao ler tickers: {e}")
+            return []
+
+    def update_market_data(self, ticker, data):
+        """
+        Atualiza ou cria um documento na coleção 'marketData'.
+        """
+        if not self.db:
+            return False
+
+        try:
+            # Adiciona timestamp do servidor
+            data['lastUpdate'] = firestore.SERVER_TIMESTAMP
+            data['ticker'] = ticker
+            
+            self.db.collection("marketData").document(ticker).set(data, merge=True)
+            print(f"✅ Firebase: marketData atualizado para {ticker}")
+            return True
+        except Exception as e:
+            print(f"❌ Firebase: Erro ao atualizar marketData para {ticker}: {e}")
+            return False
+
 # Instância única para reutilização
 firebase_manager = FirebaseManager()
