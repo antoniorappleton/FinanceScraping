@@ -1,9 +1,14 @@
 # 🚀 Market Scraper Terminal
 
-Aplicação local para recolha massiva de dados financeiros e exportação direta para **Google Sheets**.
+O objectivo principal deste projecto é criar um terminal de extracção de dados financeiros de diversas fontes, incluindo:
+- **Yahoo Finance**
+- **Finviz**
+- **Google Finance**
+- **Euronext** (Lisboa e outros mercados europeus)
 
 ## ✨ O que faz?
-- **Pesquisa em lote**: Insira dezenas de tickers de uma vez (Finviz, Yahoo, Google Finance).
+- **Pesquisa em lote**: Insira dezenas de tickers de uma vez (Finviz, Yahoo, Google Finance, Euronext).
+- **Euronext Lisboa**: Dados precisos e diretos para o mercado português.
 - **Dados Limpos**: Normaliza e organiza automaticamente os indicadores financeiros.
 - **Exportação Direta**: Envia a tabela resultante para a sua Google Sheet com um clique.
 - **Histórico**: Guarda cópias locais em JSON de cada extração.
@@ -68,13 +73,19 @@ Para sincronizar dados com a cloud:
 
 ## 🚀 Como Usar
 
-1. **Escolha a Fonte**: Recomenda-se `finviz` para dados americanos.
+1. **Escolha a Fonte**: Recomenda-se `finviz` para dados americanos ou `euronext` para portugueses.
 2. **Introduza os Tickers**: Cole a sua lista no campo de texto (um por linha ou separados por vírgula).
 3. **Processar**: Clique em **"Processar tickers"**. O programa vai percorrer a lista um a um.
 4. **Ver Resultados**: A tabela aparece automaticamente com os indicadores comparados.
 5. **Exportar**:
    - Clique em **"Exportar JSON"** para guardar localmente.
    - Clique em **"Exportar Sheets"** para enviar para a sua folha de cálculo.
+
+### 🇵🇹 Euronext (Ideal para Portugal)
+A fonte `euronext` foi desenhada para o mercado português (Lisboa) e europeu:
+- **Ticker Direto**: Não precisa de sufixo (ex: basta `EDP` ou `GALP`).
+- **Mapeamento Automático**: O terminal pesquisa o ISIN e o mercado (ex: XLIS) automaticamente.
+- **Métricas Locais**: Capitalização em Euros, Volume e variação real da bolsa de Lisboa.
 
 ---
 
