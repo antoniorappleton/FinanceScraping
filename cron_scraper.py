@@ -78,24 +78,43 @@ def run_automated_scrape():
                 price_str = result.get("title", {}).get("price") or metrics.get("price") or metrics.get("Price")
                 change_str = metrics.get("change_pct") or metrics.get("Change") or metrics.get("Net Change")
                 yield_str = metrics.get("Forward Dividend & Yield") or metrics.get("Dividend Yield") or metrics.get("Yield") or metrics.get("Dividend %")
+                pe_str = metrics.get("PE Ratio (TTM)") or metrics.get("P/E Ratio") or metrics.get("PE") or metrics.get("pe")
+                market_cap_str = metrics.get("Market Cap") or metrics.get("Market Cap (intraday)") or metrics.get("MarketCap")
+                ebitda_str = metrics.get("EBITDA") or metrics.get("ebitda")
 
                 # Clean values (Convert to numbers)
                 def clean_float(val):
                     if not val or not isinstance(val, (str, float, int)): return 0
                     if isinstance(val, (float, int)): return float(val)
-                    # Remove currency symbols, commas, percent signs
+                    # Remove currency symbols, commas, percent signs, and "B", "M", "T" suffixes
                     cleaned = val.replace("$", "").replace("%", "").replace(",", "").replace("(", "").replace(")", "").strip()
+                    
+                    # Handle B/M/T suffixes for large numbers
+                    multiplier = 1
+                    if cleaned.endswith("B"):
+                        multiplier = 1_000_000_000
+                        cleaned = cleaned[:-1]
+                    elif cleaned.endswith("M"):
+                        multiplier = 1_000_000
+                        cleaned = cleaned[:-1]
+                    elif cleaned.endswith("T"):
+                        multiplier = 1_000_000_000_000
+                        cleaned = cleaned[:-1]
+                        
                     try:
-                        return float(cleaned)
+                        return float(cleaned) * multiplier
                     except:
                         return 0
 
                 payload = {
-                    "price": clean_float(price_str),
-                    "change": clean_float(change_str),
-                    "dividendYield": clean_float(yield_str),
+                    "valorStock": clean_float(price_str),
+                    "priceChange_1d": clean_float(change_str), # Approximate for daily
+                    "yield": clean_float(yield_str) / 100 if "%" in str(yield_str) else clean_float(yield_str),
+                    "pe": clean_float(pe_str),
+                    "marketCap": clean_float(market_cap_str),
+                    "ebitda": clean_float(ebitda_str),
                     "source_used": source_name,
-                    "company_name": result.get("title", {}).get("company", ticker)
+                    "nome": result.get("title", {}).get("company", ticker)
                 }
                 
                 # 3. Update Firestore

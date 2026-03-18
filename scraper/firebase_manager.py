@@ -62,7 +62,7 @@ class FirebaseManager:
             return []
 
         try:
-            docs = self.db.collection("tickers").stream()
+            docs = self.db.collection("acoesDividendos").stream()
             tickers = []
             for d in docs:
                 data = d.to_dict()
@@ -82,11 +82,12 @@ class FirebaseManager:
 
         try:
             # Adiciona timestamp do servidor
-            data['lastUpdate'] = firestore.SERVER_TIMESTAMP
+            data['updatedAt'] = firestore.SERVER_TIMESTAMP
+            data['ultimaAtu'] = firestore.SERVER_TIMESTAMP
             data['ticker'] = ticker
             
-            self.db.collection("marketData").document(ticker).set(data, merge=True)
-            print(f"✅ Firebase: marketData atualizado para {ticker}")
+            self.db.collection("acoesDividendos").document(ticker).set(data, merge=True)
+            print(f"✅ Firebase: acoesDividendos atualizado para {ticker}")
             return True
         except Exception as e:
             print(f"❌ Firebase: Erro ao atualizar marketData para {ticker}: {e}")
