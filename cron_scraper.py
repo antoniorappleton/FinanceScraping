@@ -106,6 +106,7 @@ def run_automated_scrape(mode="full"):
                     roi_str = metrics.get("ROI")
                     dividend_val_str = metrics.get("Dividend")
 
+                    # Initialize payload with fixed/cleaned fields
                     payload = {
                         "valorStock": clean_float(price_str),
                         "priceChange_1d": clean_float(change_str) / 100 if "%" in str(change_str) else clean_float(change_str),
@@ -120,10 +121,29 @@ def run_automated_scrape(mode="full"):
                         "marketCap": clean_float(market_cap_str),
                         "ebitda": clean_float(ebitda_str),
                         "source_used": source_name,
-                        "nome": result.get("title", {}).get("company", ticker)
+                        "nome": result.get("title", {}).get("company", ticker),
+                        "lastFullSync": datetime.now().isoformat()
                     }
+
+                    # Add ALL other metrics from the scraper
+                    # We map them to Firestore-friendly keys if they contain spaces or special chars
+                    for k, v in metrics.items():
+                        # Create a clean key (replace spaces with _, remove special chars)
+                        clean_key = k.replace(" ", "_").replace("/", "_").replace("(", "").replace(")", "").replace("%", "pct").replace("-", "_")
+                        
+                        # Avoid overwriting already processed specialized fields
+                        if clean_key not in payload:
+                            # Try to clean if it looks like a number/percentage
+                            if isinstance(v, str) and (re.search(r'\d', v) or v == "-"):
+                                if "%" in v:
+                                    payload[clean_key] = clean_float(v) / 100
+                                else:
+                                    payload[clean_key] = clean_float(v)
+                            else:
+                                payload[clean_key] = v
                 
                 # 3. Update Firestore
+                logger.info(f"📤 Sending {len(payload)} fields to Firestore for {ticker}: {list(payload.keys())}")
                 if firebase_manager.update_market_data(ticker, payload):
                     logger.info(f"✅ {ticker} updated ({mode}) via {source_name}")
                     success = True
