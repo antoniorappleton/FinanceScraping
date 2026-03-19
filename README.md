@@ -10,14 +10,21 @@ Este projecto é uma ferramenta poderosa de extracção e automação de dados f
 - **Euronext Lisboa**: Dados precisos e diretos para o mercado português.
 - **Exportação Direta**: Envia os dados para Google Sheets ou guarda localmente em JSON.
 
-### 🤖 Automação Diária (Cloud Sync)
+### 🤖 Automação em Camadas (Cloud Sync)
 
-- **Sincronização Firestore**: O projecto lê automaticamente a lista de tickers da coleção **`acoesDividendos`** no Firebase e atualiza os indicadores de mercado.
-- **Execução Assíncrona (Cloud)**: Utiliza **GitHub Actions** para correr de forma totalmente autónoma todas as noites (00:00 UTC), sem necessidade de hardware local ligado.
-- **Multi-Source Failover**: Tenta obter dados de múltiplas fontes (Yahoo, Google, Finviz, Euronext) para garantir que a base de dados está sempre atualizada.
+Para otimizar recursos e garantir dados sempre frescos, o projeto utiliza uma estratégia de duas camadas via **GitHub Actions**:
+
+- **Sincronização Rápida (Fast Sync)**:
+    - **Frequência**: A cada 4 horas.
+    - **Dados**: Apenas indicadores de alta variação: `valorStock`, `priceChange_1d` e `marketCap`.
+    - **Objetivo**: Manter o preço e variação diária sempre atualizados.
+- **Sincronização Completa (Full Sync)**:
+    - **Frequência**: Semanal (Domingos às 00:00 UTC).
+    - **Dados**: Todos os indicadores financeiros (ROE, ROA, Dividendos, P/E, EBITDA, etc.).
+    - **Objetivo**: Atualizar métricas fundamentais que mudam com menos frequência.
 
 #### 📊 Detalhes Técnicos da Coleção `acoesDividendos`
-A cada execução do `cron_scraper.py`, os seguintes campos são sincronizados no Firestore para cada ticker:
+A cada execução do `cron_scraper.py`, os seguintes campos são sincronizados no Firestore conforme o modo selecionado (`--mode fast` ou `--mode full`):
 
 | Campo | Descrição |
 | :--- | :--- |
