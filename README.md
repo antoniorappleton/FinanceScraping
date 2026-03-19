@@ -12,9 +12,30 @@ Este projecto é uma ferramenta poderosa de extracção e automação de dados f
 
 ### 🤖 Automação Diária (Cloud Sync)
 
-- **Sincronização Firestore**: O projecto lê automaticamente uma lista de tickers da sua base de dados Firebase e actualiza os indicadores de mercado todos os dias.
-- **GitHub Actions**: Configurado para correr de forma totalmente autónoma (sem intervenção manual) todas as noites.
-- **Multi-Source Failover**: Tenta obter dados de múltiplas fontes (Yahoo, Google, Finviz) para garantir que a sua base de dados está sempre actualizada.
+- **Sincronização Firestore**: O projecto lê automaticamente a lista de tickers da coleção **`acoesDividendos`** no Firebase e atualiza os indicadores de mercado.
+- **Execução Assíncrona (Cloud)**: Utiliza **GitHub Actions** para correr de forma totalmente autónoma todas as noites (00:00 UTC), sem necessidade de hardware local ligado.
+- **Multi-Source Failover**: Tenta obter dados de múltiplas fontes (Yahoo, Google, Finviz, Euronext) para garantir que a base de dados está sempre atualizada.
+
+#### 📊 Detalhes Técnicos da Coleção `acoesDividendos`
+A cada execução do `cron_scraper.py`, os seguintes campos são sincronizados no Firestore para cada ticker:
+
+| Campo | Descrição |
+| :--- | :--- |
+| `valorStock` | Preço atual da ação |
+| `priceChange_1d` | Variação percentual diária |
+| `priceChange_1w` | Variação percentual semanal (7 dias) |
+| `priceChange_1y` | Variação percentual anual (1 ano) |
+| `yield` | Dividend Yield (decimal, ex: 0.05 para 5%) |
+| `dividendValue` | Valor absoluto do dividendo |
+| `pe` | Rácio Price-to-Earnings (P/E) |
+| `roa` | Return on Assets (decimal) |
+| `roe` | Return on Equity (decimal) |
+| `roi` | Return on Investment (ROIC equivalente, decimal) |
+| `marketCap` | Capitalização de mercado total |
+| `ebitda` | EBITDA da empresa |
+| `nome` | Nome oficial da empresa |
+| `source_used` | Fonte utilizada (ex: `yahoo`, `euronext`) |
+| `ultimaAtu` | Timestamp da última atualização (Firestore Server Time) |
 
 ---
 

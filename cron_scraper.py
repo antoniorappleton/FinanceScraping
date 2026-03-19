@@ -82,6 +82,14 @@ def run_automated_scrape():
                 market_cap_str = metrics.get("Market Cap") or metrics.get("Market Cap (intraday)") or metrics.get("MarketCap")
                 ebitda_str = metrics.get("EBITDA") or metrics.get("ebitda")
 
+                # New extracted fields
+                perf_1w_str = metrics.get("Perf Week")
+                perf_1y_str = metrics.get("Perf Year")
+                roa_str = metrics.get("ROA")
+                roe_str = metrics.get("ROE")
+                roi_str = metrics.get("ROI")
+                dividend_val_str = metrics.get("Dividend")
+
                 # Clean values (Convert to numbers)
                 def clean_float(val):
                     if not val or not isinstance(val, (str, float, int)): return 0
@@ -108,9 +116,15 @@ def run_automated_scrape():
 
                 payload = {
                     "valorStock": clean_float(price_str),
-                    "priceChange_1d": clean_float(change_str), # Approximate for daily
+                    "priceChange_1d": clean_float(change_str) / 100 if "%" in str(change_str) else clean_float(change_str),
+                    "priceChange_1w": clean_float(perf_1w_str) / 100 if "%" in str(perf_1w_str) else clean_float(perf_1w_str),
+                    "priceChange_1y": clean_float(perf_1y_str) / 100 if "%" in str(perf_1y_str) else clean_float(perf_1y_str),
                     "yield": clean_float(yield_str) / 100 if "%" in str(yield_str) else clean_float(yield_str),
+                    "dividendValue": clean_float(dividend_val_str),
                     "pe": clean_float(pe_str),
+                    "roa": clean_float(roa_str) / 100 if "%" in str(roa_str) else clean_float(roa_str),
+                    "roe": clean_float(roe_str) / 100 if "%" in str(roe_str) else clean_float(roe_str),
+                    "roi": clean_float(roi_str) / 100 if "%" in str(roi_str) else clean_float(roi_str),
                     "marketCap": clean_float(market_cap_str),
                     "ebitda": clean_float(ebitda_str),
                     "source_used": source_name,
