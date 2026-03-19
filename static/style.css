@@ -117,3 +117,48 @@ button {
         grid-template-columns: 1fr;
     }
 }
+
+/* Indicator Guide */
+.indicator-guide {
+  margin: 1.5rem 0;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.indicator-guide summary {
+  padding: 1rem 1.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.05);
+  transition: background 0.3s;
+}
+
+.indicator-guide summary:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.guide-content {
+  padding: 1.5rem;
+  border-top: 1px solid #334155;
+}
+
+.guide-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.guide-item h4 {
+  margin: 0 0 0.5rem 0;
+  color: #38bdf8;
+  font-size: 1rem;
+}
+
+.guide-item p {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: #94a3b8;
+}

@@ -15,8 +15,12 @@ class BaseScraper(ABC):
     @classmethod
     def normalize_ticker(cls, ticker: str, market: str) -> str:
         """Normalize ticker with market-specific suffix if not present."""
-        suffix = MARKET_SUFFIXES.get(market, "")
         ticker = ticker.strip().upper()
+        # If ticker already contains a colon (exchange indicator like 'FRA:LYM9'), skip suffix
+        if ":" in ticker:
+            return ticker
+            
+        suffix = MARKET_SUFFIXES.get(market, "")
         if suffix and not ticker.endswith(suffix):
             ticker += suffix
         return ticker

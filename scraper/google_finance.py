@@ -17,6 +17,7 @@ class GoogleFinanceScraper(BaseScraper):
         "EU": "FRA,XETR",
         "PT": "LIS",
         "BR": "BVMF",
+        "LON": "LON",
     }
 
     def __init__(self, pause_seconds: float = 2.0) -> None:
@@ -39,8 +40,14 @@ class GoogleFinanceScraper(BaseScraper):
         return re.sub(r"\s+", " ", value).strip()
 
     def _get_html(self, ticker: str, market: str) -> str:
-        exchange = self.EXCHANGE_MAP.get(market, "NASDAQ")
-        url = f"{self.BASE_URL}/{ticker}:{exchange}"
+        # If ticker already has an exchange (TICKER:EXCHANGE), use it directly
+        if ":" in ticker:
+            ticker_param = ticker
+        else:
+            exchange = self.EXCHANGE_MAP.get(market, "NASDAQ")
+            ticker_param = f"{ticker}:{exchange}"
+            
+        url = f"{self.BASE_URL}/{ticker_param}"
         response = self.session.get(url, timeout=20)
         response.raise_for_status()
         time.sleep(self.pause_seconds)
