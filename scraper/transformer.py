@@ -114,8 +114,8 @@ def clean_row_for_firestore(row: Dict[str, Any]) -> Dict[str, Any]:
 
     for k, v in row.items():
         # 1. Clean Key
-        # replace spaces with _, remove special chars, etc.
-        clean_key = k.replace(" ", "_").replace("/", "_").replace("(", "").replace(")", "").replace("%", "pct").replace("-", "_")
+        # replace spaces with _, remove dots, slashes, remove parentheses, ensure lowercase
+        clean_key = k.lower().replace(" ", "_").replace("/", "_").replace(".", "").replace("(", "").replace(")", "").replace("%", "pct").replace("-", "_")
         
         # 2. Clean Value
         if clean_key.lower() in info_fields or k.lower() in info_fields:

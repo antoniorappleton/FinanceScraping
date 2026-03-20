@@ -2,6 +2,7 @@ import os
 import firebase_admin
 from firebase_admin import credentials, firestore
 from datetime import datetime
+from scraper.transformer import clean_row_for_firestore
 
 class FirebaseManager:
     """
@@ -12,23 +13,43 @@ class FirebaseManager:
         self._initialize()
 
     def _initialize(self):
-        # Tenta inicializar usando o caminho do ficheiro .json definido no .env
-        cred_path = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
-        
-        if not cred_path or not os.path.exists(cred_path):
-            print(f"Firebase: Ficheiro de credenciais nao encontrado em: {cred_path}")
-            return
-
+        """
+        Inicializa o Firebase usando o caminho do ficheiro JSON no .env.
+        """
         try:
-            # Evita re-inicialização se já existir uma app
+            # Já foi inicializado?
+            if firebase_admin._apps and self.db:
+                return
+
+            cred_path = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
+            print(f"DEBUG Firebase: Tentativa de inicializar com path: {cred_path}")
+            
+            if not cred_path:
+                print("DEBUG Firebase: Caminho (FIREBASE_SERVICE_ACCOUNT_JSON) está VAZIO.")
+                return
+
+            if "COLE_O_CAMINHO" in cred_path:
+                print(f"DEBUG Firebase: O caminho ainda contém o placeholder: {cred_path}")
+                return
+
+            if not os.path.exists(cred_path):
+                print(f"DEBUG Firebase: O ficheiro NÃO EXISTE no caminho: {cred_path}")
+                return
+
+            # Se chegámos aqui, o path parece válido
+            print(f"DEBUG Firebase: Ficheiro encontrado! A configurar credenciais...")
+            
             if not firebase_admin._apps:
                 cred = credentials.Certificate(cred_path)
                 firebase_admin.initialize_app(cred)
             
             self.db = firestore.client()
-            print("Firebase: Ligacao ao Firestore estabelecida com sucesso.")
+            print("Firebase: Ligação ao Firestore estabelecida com SUCESSO.")
         except Exception as e:
-            print(f"Firebase: Erro ao inicializar: {e}")
+            print(f"❌ Firebase: Erro fatal na inicialização: {e}")
+            import traceback
+            traceback.print_exc()
+            self.db = None
 
     def save_batch(self, payload):
         """

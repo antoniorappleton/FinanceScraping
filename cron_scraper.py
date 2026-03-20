@@ -102,6 +102,24 @@ def run_automated_scrape(mode="full"):
                         "roi": clean_float(roi_str),
                         "marketCap": clean_float(market_cap_str),
                         "ebitda": clean_float(ebitda_str),
+                        
+                        # New Requested Indicators
+                        "dividend_est": clean_float(metrics.get("Dividend Est.")),
+                        "dividend_ex_date": metrics.get("Dividend Ex-Date"), # Keep date as string
+                        "dividend_gr_3_5y": clean_float(metrics.get("Dividend Gr. 3/5Y")),
+                        "eps_next_q": clean_float(metrics.get("EPS next Q")),
+                        "eps_next_y": clean_float(metrics.get("EPS next Y")),
+                        "eps_this_y": clean_float(metrics.get("EPS this Y")),
+                        "ev_ebitda": clean_float(metrics.get("EV/EBITDA")),
+                        "enterprise_value": clean_float(metrics.get("Enterprise Value")),
+                        "p_b": clean_float(metrics.get("P/B")),
+                        "perf_half_y": clean_float(metrics.get("Perf Half Y")),
+                        "perf_quarter": clean_float(metrics.get("Perf Quarter")),
+                        "sma200": clean_float(metrics.get("SMA200")),
+                        "sma50": clean_float(metrics.get("SMA50")),
+                        "target_price": clean_float(metrics.get("Target Price")),
+                        "volatility": clean_float(metrics.get("Volatility")),
+
                         "source_used": source_name,
                         "nome": result.get("title", {}).get("company", ticker),
                         "lastFullSync": datetime.now().isoformat()
