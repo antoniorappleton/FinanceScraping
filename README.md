@@ -34,12 +34,27 @@ A cada execução do `cron_scraper.py`, os seguintes campos são sincronizados n
 | `priceChange_1y` | Variação percentual anual (1 ano) |
 | `yield` | Dividend Yield (decimal, ex: 0.05 para 5%) |
 | `dividendValue` | Valor absoluto do dividendo |
+| `dividend_est` | Estimativa de dividendo futuro |
+| `dividend_ex_date` | Data ex-dividendo |
+| `dividend_gr_3_5y` | Crescimento de dividendos (3-5 anos) |
 | `pe` | Rácio Price-to-Earnings (P/E) |
 | `roa` | Return on Assets (decimal) |
 | `roe` | Return on Equity (decimal) |
 | `roi` | Return on Investment (ROIC equivalente, decimal) |
 | `marketCap` | Capitalização de mercado total |
 | `ebitda` | EBITDA da empresa |
+| `ev_ebitda` | Enterprise Value / EBITDA |
+| `enterprise_value` | Valor da Empresa (Enterprise Value) |
+| `eps_next_q` | EPS estimado para o próximo trimestre |
+| `eps_next_y` | EPS estimado para o próximo ano |
+| `eps_this_y` | EPS estimado para este ano |
+| `p_b` | Price to Book (P/B) |
+| `perf_half_y` | Performance semestral |
+| `perf_quarter` | Performance trimestral |
+| `sma200` | Simple Moving Average (200 dias) |
+| `sma50` | Simple Moving Average (50 dias) |
+| `target_price` | Preço-alvo (Target Price) |
+| `volatility` | Volatilidade |
 | `nome` | Nome oficial da empresa |
 | `source_used` | Fonte utilizada (ex: `yahoo`, `euronext`) |
 | `ultimaAtu` | Timestamp da última atualização (Firestore Server Time) |
