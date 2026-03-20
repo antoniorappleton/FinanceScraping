@@ -230,14 +230,25 @@ def sync_firebase():
     if not data or "rows" not in data:
         return jsonify({"error": "Nenhum dado para sincronizar."}), 400
         
-    success = firebase_manager.save_batch(data)
+    # Check if Firebase is initialized
+    if not firebase_manager.db:
+        # Try to re-initialize in case .env was just fixed
+        firebase_manager._initialize()
+        if not firebase_manager.db:
+            return jsonify({
+                "error": "Firebase não inicializado.",
+                "details": "Verifique se o ficheiro JSON de credenciais existe e se o caminho no .env está correto."
+            }), 500
+
+    # Use the new method that updates individual tickers in 'acoesDividendos'
+    success = firebase_manager.save_batch_to_market_data(data)
     
     if success:
-        return jsonify({"status": "success", "message": "Batch sincronizado com o Firebase."})
+        return jsonify({"status": "success", "message": "Dados sincronizados com a colecao 'acoesDividendos'."})
     else:
         return jsonify({
             "error": "Erro ao sincronizar com o Firebase.",
-            "details": "Verifique se o caminho para o ficheiro de credenciais no .env está correto."
+            "details": "Ocorreu um erro ao atualizar os documentos. Verifique a consola do terminal para detalhes."
         }), 500
 
 

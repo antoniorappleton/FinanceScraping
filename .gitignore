@@ -114,6 +114,10 @@ data/processed/
 logs/
 *.json  # raw data files, but allow requirements.txt etc.
 
+# Firebase credentials
+*-firebase-adminsdk-*.json
+serviceAccountKey.json
+
 # IDE
 .vscode/
 .idea/
