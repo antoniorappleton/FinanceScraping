@@ -14,6 +14,10 @@ const syncFirebaseBtn = document.getElementById("syncFirebaseBtn");
 const exportStatus = document.getElementById("exportStatus");
 
 let lastBatchData = null;
+let recentBatches = [];
+
+const loadRecentBtn = document.getElementById("loadRecentBtn");
+const recentSelect = document.getElementById("recentSelect");  // Will add dynamically
 
 function checkElements() {
   if (!tickersEl || !batchSearchBtn || !statusEl) {
@@ -130,6 +134,67 @@ function renderBatchResult(data) {
 // Event Listeners
 if (batchSearchBtn) {
   batchSearchBtn.addEventListener("click", processBatch);
+}
+
+if (loadRecentBtn) {
+  loadRecentBtn.addEventListener("click", async () => {
+    statusEl.textContent = "🔍 Loading recent batches from data/raw...";
+    statusSection.style.display = "block";
+    resultsSection.style.display = "none";
+    
+    try {
+      const response = await fetch("/api/load-recent");
+      const result = await response.json();
+      
+      if (result.batches && result.batches.length > 0) {
+        recentBatches = result.batches;
+        statusEl.textContent = `Found ${result.count} recent batch(es). Select below:`;
+        
+        // Create/select dropdown after batch-input
+        let selectContainer = document.getElementById("recentSelectContainer");
+        if (!selectContainer) {
+          selectContainer = document.createElement("div");
+          selectContainer.id = "recentSelectContainer";
+          selectContainer.style.cssText = "margin: 1rem 0; padding: 1rem; background: #f8fafc; border-radius: 8px; border-left: 4px solid #3b82f6;";
+          document.querySelector(".batch-input").after(selectContainer);
+        }
+        
+        let selectHtml = '<label for="recentSelect"><strong>Select Batch:</strong></label><br>';
+        recentBatches.forEach((batch, i) => {
+          const timeStr = new Date(batch.timestamp).toLocaleString("pt-PT");
+          selectHtml += `<option value="${i}">${batch.filename} (${batch.success}/${batch.total}, ${timeStr})</option>`;
+        });
+        selectHtml += '</select><button id="loadSelectedBtn" style="margin-left: 10px;">Load Selected → Table</button>';
+        
+        selectContainer.innerHTML = selectHtml;
+        
+        const loadSelectedBtn = document.getElementById("loadSelectedBtn");
+        if (loadSelectedBtn) {
+          loadSelectedBtn.onclick = () => {
+            const select = selectContainer.querySelector("select");
+            const idx = parseInt(select.value);
+            const selectedBatch = recentBatches[idx];
+            if (selectedBatch) {
+              lastBatchData = {
+                ...selectedBatch,
+                total_requested: selectedBatch.total,
+                total_success: selectedBatch.success,
+                total_errors: selectedBatch.total - selectedBatch.success,
+                filename: selectedBatch.filename
+              };
+              renderBatchResult(lastBatchData);
+              statusEl.textContent = `Loaded: ${selectedBatch.filename}`;
+            }
+          };
+        }
+        
+      } else {
+        statusEl.innerHTML = '<span style="color: orange;">No recent batches found in data/raw (last 24h).</span>';
+      }
+    } catch (error) {
+      statusEl.innerHTML = `<span class="error-text">Error loading recent: ${error.message}</span>`;
+    }
+  });
 }
 
 // Quick examples logic

@@ -91,32 +91,49 @@ class JustETFScraper(BaseScraper):
         title_tag = soup.find("h1")
         company = self._clean_text(title_tag.get_text()) if title_tag else ticker
         
-        # Extract metrics from info boxes/tables
-        # JustETF has a lot of "col-md-4" or similar structures with labels
-        labels = soup.find_all("div", class_="h4") # Common for labels in some versions
-        # Or tables
+        # Robust extraction: multiple selectors for JustETF profile data
+        # 1. h1 title already done
+        # 2. Info tables
         tables = soup.find_all("table")
         for table in tables:
             rows = table.find_all("tr")
             for row in rows:
-                tds = row.find_all("td")
+                tds = row.find_all(["td", "th"])
                 if len(tds) >= 2:
-                    key = self._clean_text(tds[0].get_text())
-                    val = self._clean_text(tds[1].get_text())
-                    if key and val:
+                    key_elem = tds[0]
+                    val_elem = tds[1]
+                    key = self._clean_text(key_elem.get_text())
+                    val = self._clean_text(val_elem.get_text())
+                    if key and val and key not in metrics:
                         metrics[key] = val
 
-        # Specific mappings for the user list if possible
-        # TER, Fund Size, Replication, Distribution
-        # These are often in a specific div structure "val-list"
-        val_items = soup.find_all("div", class_="val-item")
-        for item in val_items:
-            label = item.find("div", class_="label")
-            value = item.find("div", class_="value")
+        # 3. Key facts panels (common JustETF classes)
+        panels = soup.find_all(["div", "span"], class_=re.compile(r"(fact|key|info|val|metric|data)"))
+        for panel in panels:
+            label_elem = panel.find(["strong", "label", "dt", ".label", "[class*='label']"])
+            value_elem = panel.find(["span", "dd", ".value", "[class*='value']"]) or panel
+            if label_elem:
+                k = self._clean_text(label_elem.get_text())
+                if k:
+                    v_elem = value_elem.find_next_sibling() or value_elem
+                    v = self._clean_text(v_elem.get_text())
+                    if v and k not in metrics:
+                        metrics[key] = v
+
+        # 4. Specific JustETF structures
+        fact_rows = soup.find_all("div", class_=re.compile(r"fact-row|key-fact"))
+        for row in fact_rows:
+            label = row.find(class_=re.compile(r"label|key"))
+            value = row.find(class_=re.compile(r"value|data"))
             if label and value:
-                k = self._clean_text(label.get_text())
-                v = self._clean_text(value.get_text())
-                metrics[k] = v
+                metrics[self._clean_text(label.get_text())] = self._clean_text(value.get_text())
+
+        # 5. Meta/og:title fallback for company
+        if not company:
+            og_title = soup.find("meta", property="og:title")
+            if og_title:
+                company = self._clean_text(og_title.get("content"))
+
 
         return {
             "source": self.source_name,

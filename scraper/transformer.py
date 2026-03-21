@@ -28,11 +28,13 @@ def flatten_scrape_result(result: Dict[str, Any]) -> Dict[str, Any]:
     Convert a nested scraper result into a flat dictionary for table rows.
     """
     row = {
-        "source": result.get("source"),
-        "market": result.get("market"),
-        "ticker_requested": result.get("ticker_requested"),
-        "ticker_used": result.get("ticker_used"),
-        "url": result.get("url"),
+        "source": result.get("source", "unknown"),
+        "market": result.get("detected_market") or result.get("market", "unknown"),
+        "ticker_requested": result.get("ticker_requested", result.get("ticker", "")),
+        "ticker_used": result.get("ticker_used", ""),
+        "url": result.get("url", ""),
+        "company": "",
+        "ticker": "",
     }
     
     # Extract title fields

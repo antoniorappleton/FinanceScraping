@@ -86,8 +86,8 @@ def search():
         market_detected = result.get("detected_market", "unknown")
         asset_type = result.get("asset_type", "unknown")
         output_file = output_dir / f"auto_{asset_type}_{market_detected}_{ticker}_{timestamp}.json"
-        with open(output_file, "w", encoding="utf-8") as file:
-            json.dump(result, file, indent=2, ensure_ascii=False)
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(result, f, indent=2, ensure_ascii=False)
         return jsonify(result)
 
     if source not in SCRAPER_REGISTRY:
@@ -144,66 +144,17 @@ def search_batch():
     if not raw_tickers:
         return jsonify({"error": "Nenhum ticker fornecido."}), 400
 
-    if not source or not market:
-        tickers = normalize_tickers_from_text(raw_tickers)
-        rows = []
-        errors = []
-        for i, ticker in enumerate(tickers):
-            if i > 0:
-                time.sleep(1.5)
-            try:
-                result = scrape_multi_source(ticker)
-                flat_row = flatten_scrape_result(result)
-                rows.append(flat_row)
-            except Exception as exc:
-                errors.append({
-                    "ticker": ticker,
-                    "error": str(exc)
-                })
-        columns = build_ordered_columns(rows)
-        payload = {
-            "source": "auto",
-            "market": "auto",
-            "tickers_requested": tickers,
-            "total_requested": len(tickers),
-            "total_success": len(rows),
-            "total_errors": len(errors),
-            "columns": columns,
-            "rows": rows,
-            "errors": errors,
-            "timestamp": datetime.now().isoformat()
-        }
-        # Persist batch result
-        try:
-            output_dir = Path("data/raw")
-            output_dir.mkdir(parents=True, exist_ok=True)
-            timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_file = output_dir / f"batch_auto_{timestamp_str}.json"
-            with open(output_file, "w", encoding="utf-8") as f:
-                json.dump(payload, f, indent=2, ensure_ascii=False)
-        except Exception as e:
-            print(f"Error saving auto batch: {e}")
-        return jsonify(payload)
-
-    if source not in SCRAPER_REGISTRY:
-        return jsonify({"error": "Fonte inválida."}), 400
-
-    if market not in SUPPORTED_MARKETS:
-        return jsonify({"error": "Mercado inválido."}), 400
-
     tickers = normalize_tickers_from_text(raw_tickers)
-    scraper = SCRAPER_REGISTRY[source]
-
     rows = []
     errors = []
 
+    # Always use intelligent routing (ignore source/market if provided, or use for all)
     for i, ticker in enumerate(tickers):
-        # Apply delay between requests (except the first)
+        # Rate limiting for batch
         if i > 0:
-            time.sleep(1.5) # Configurable delay 1-2s
-
+            time.sleep(1.5)
         try:
-            result = scraper.scrape_quote(ticker=ticker, market=market)
+            result = scrape_multi_source(ticker)
             flat_row = flatten_scrape_result(result)
             rows.append(flat_row)
         except Exception as exc:
@@ -213,10 +164,8 @@ def search_batch():
             })
 
     columns = build_ordered_columns(rows)
-
     payload = {
-        "source": source,
-        "market": market,
+        "source": "intelligent_multi",  # Indicates auto-routing used
         "tickers_requested": tickers,
         "total_requested": len(tickers),
         "total_success": len(rows),
@@ -226,18 +175,16 @@ def search_batch():
         "errors": errors,
         "timestamp": datetime.now().isoformat()
     }
-
     # Persist batch result
     try:
         output_dir = Path("data/raw")
         output_dir.mkdir(parents=True, exist_ok=True)
         timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_file = output_dir / f"batch_{source}_{market}_{timestamp_str}.json"
-
+        output_file = output_dir / f"batch_intelligent_{timestamp_str}.json"
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(payload, f, indent=2, ensure_ascii=False)
+        print(f"Batch saved to {output_file}")
     except Exception as e:
-        # Don't fail the request if persistence fails, but log it
         print(f"Error saving batch: {e}")
 
     return jsonify(payload)
@@ -273,6 +220,51 @@ def export_sheets():
             "details": str(exc),
             "traceback": error_details
         }), 500
+
+
+@app.route("/api/load-recent")
+def load_recent_batches():
+    """Scan data/raw for recent batch JSON files and return structured data."""
+    output_dir = Path("data/raw")
+    if not output_dir.exists():
+        return jsonify({"batches": []})
+    
+    cutoff_time = datetime.now().timestamp() - 24*60*60  # Last 24 hours
+    
+    batches = []
+    for json_file in output_dir.glob("*.json"):
+        if json_file.stat().st_mtime < cutoff_time:
+            continue
+            
+        try:
+            with open(json_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            
+            # Check if it's a batch file with rows/columns
+            if "rows" in data and "columns" in data and len(data["rows"]) > 0:
+                preview_rows = data["rows"][:3]  # First 3 rows for preview
+                
+                batches.append({
+                    "filename": json_file.name,
+                    "path": str(json_file),
+                    "timestamp": data.get("timestamp", json_file.stat().st_mtime),
+                    "success": data.get("success", len(data["rows"])),
+                    "total": data.get("total_requested", len(data["rows"])),
+                    "rows": data["rows"],
+                    "columns": data["columns"],
+                    "preview": preview_rows
+                })
+        except (json.JSONDecodeError, KeyError):
+            continue  # Skip invalid/malformed JSON files
+    
+    # Sort by timestamp desc (most recent first), limit 10
+    batches.sort(key=lambda b: b["timestamp"], reverse=True)
+    batches = batches[:10]
+    
+    return jsonify({
+        "batches": batches,
+        "count": len(batches)
+    })
 
 
 @app.route("/api/sync-firebase", methods=["POST"])
