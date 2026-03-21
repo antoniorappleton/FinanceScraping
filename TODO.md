@@ -1,30 +1,15 @@
-# FinanceScraping - Deployed to GitHub Pages! 🚀
+# TODO Progress: Fixing app.py, static/app.js, static/style.css to best version
 
-**Status:** ✅ Live!
+## Completed Steps:
+1. ✅ Create this TODO.md
+2. ✅ Fix app.py: Removed duplicate imports, corrected malformed indentation in routes, PEP8 cleanup.
+3. ✅ Update static/style.css: Added styles for stats (.stat*), table (th/td), errors (#errorList, .error-text), sections.
+4. ✅ Minor improvements to static/app.js: Added checkElements(), null checks, better error messages, rel=noopener on links.
 
-## Steps Completed:
-**1. [✅] docs/index.html** - Static HTML/JS using FMP API (AAPL/PETR4/NOS work)
-**2. [✅] Test local** - `cd docs && python -m http.server 8000` (Windows: manual cd) → localhost:8000 tested via file://
-**3. [✅] Deploy** - Git push + Pages settings (committed c0a2b40)
-**4. [✅] Phase 1 & 2** - Terminal de Lote e Integração Google Sheets (Março 2026)
+## Pending Steps:
+5. Test changes: Run `python app.py` and verify UI/batch search works.
+6. Final cleanup if needed.
+7. attempt_completion.
 
-**Completed:** 4/4 ✅
+**Status: Edits complete. Ready for testing.**
 
-## Next Commands:
-```
-git add docs/
-git commit -m "feat: static GitHub Pages app with FMP API"
-git push origin main
-```
-Then: Repo Settings > Pages > Source: `main` / `/docs` folder
-
-**Live URL:** https://antoniorappleton.github.io/FinanceScraping/
-
-**Test:**
-- AAPL → price + profile + metrics
-- PETR4 → PETR4.SA data
-- NOS → NOS.LS Portugal
-
-**Local Full App:** `cd FinanceScraping && python app.py`
-
-**Completed:** 2/4

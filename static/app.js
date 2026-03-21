@@ -1,5 +1,3 @@
-const sourceEl = document.getElementById("source");
-const marketEl = document.getElementById("market");
 const tickersEl = document.getElementById("tickers");
 const batchSearchBtn = document.getElementById("batchSearchBtn");
 const statusEl = document.getElementById("status");
@@ -11,13 +9,24 @@ const statusSection = document.getElementById("statusSection");
 const errorSection = document.getElementById("errorSection");
 const resultsSection = document.getElementById("resultsSection");
 const exportJsonBtn = document.getElementById("exportJsonBtn");
+const exportSheetsBtn = document.getElementById("exportSheetsBtn");
+const syncFirebaseBtn = document.getElementById("syncFirebaseBtn");
+const exportStatus = document.getElementById("exportStatus");
 
 let lastBatchData = null;
 
+function checkElements() {
+  if (!tickersEl || !batchSearchBtn || !statusEl) {
+    console.error("Required DOM elements not found");
+    return false;
+  }
+  return true;
+}
+
 async function processBatch() {
+  if (!checkElements()) return;
+
   const tickers = tickersEl.value.trim();
-  const source = sourceEl.value;
-  const market = marketEl.value;
 
   if (!tickers) {
     alert("Por favor, introduz pelo menos um ticker.");
@@ -28,7 +37,7 @@ async function processBatch() {
   statusSection.style.display = "block";
   errorSection.style.display = "none";
   resultsSection.style.display = "none";
-  statusEl.textContent = "A processar lote... Isto pode demorar dependendo da quantidade de tickers.";
+  statusEl.textContent = "🔍 Detetando ativos e mercados... Scraping multi-fonte automático!";
   summaryEl.innerHTML = "";
   errorListEl.innerHTML = "";
   batchSearchBtn.disabled = true;
@@ -37,7 +46,7 @@ async function processBatch() {
     const response = await fetch("/api/search-batch", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tickers, source, market }),
+      body: JSON.stringify({ tickers }),
     });
 
     if (!response.ok) {
@@ -57,7 +66,7 @@ async function processBatch() {
 
 function renderBatchResult(data) {
   statusEl.textContent = "Processamento concluído.";
-  
+
   // Render Summary
   summaryEl.innerHTML = `
     <div class="stat">
@@ -77,6 +86,7 @@ function renderBatchResult(data) {
   // Render Errors
   if (data.errors && data.errors.length > 0) {
     errorSection.style.display = "block";
+    errorListEl.innerHTML = "";
     data.errors.forEach(err => {
       const li = document.createElement("li");
       li.innerHTML = `<strong>${err.ticker}:</strong> ${err.error}`;
@@ -87,7 +97,7 @@ function renderBatchResult(data) {
   // Render Table
   if (data.rows && data.rows.length > 0) {
     resultsSection.style.display = "block";
-    
+
     // Header
     tableHeaderEl.innerHTML = "";
     data.columns.forEach(col => {
@@ -103,10 +113,10 @@ function renderBatchResult(data) {
       data.columns.forEach(col => {
         const td = document.createElement("td");
         let val = row[col] || "-";
-        
+
         // Special formatting for URL
         if (col === 'url' && val !== '-') {
-            td.innerHTML = `<a href="${val}" target="_blank">Link</a>`;
+            td.innerHTML = `<a href="${val}" target="_blank" rel="noopener">Link</a>`;
         } else {
             td.textContent = val;
         }
@@ -117,31 +127,44 @@ function renderBatchResult(data) {
   }
 }
 
-batchSearchBtn.addEventListener("click", processBatch);
+// Event Listeners
+if (batchSearchBtn) {
+  batchSearchBtn.addEventListener("click", processBatch);
+}
 
 // Quick examples logic
 document.querySelectorAll(".chip").forEach(chip => {
   chip.addEventListener("click", () => {
-    tickersEl.value = chip.dataset.ticker.replace(/, /g, '\n');
+    if (tickersEl) {
+      tickersEl.value = chip.dataset.ticker.replace(/, /g, '\n');
+    }
   });
 });
 
-exportJsonBtn.addEventListener("click", () => {
-  if (!lastBatchData) return;
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(lastBatchData, null, 2));
-  const downloadAnchorNode = document.createElement('a');
-  downloadAnchorNode.setAttribute("href", dataStr);
-  downloadAnchorNode.setAttribute("download", `batch_export_${new Date().getTime()}.json`);
-  document.body.appendChild(downloadAnchorNode);
-  downloadAnchorNode.click();
-  downloadAnchorNode.remove();
-});
+// Export JSON
+if (exportJsonBtn) {
+  exportJsonBtn.addEventListener("click", () => {
+    if (!lastBatchData) {
+      alert("No data to export. Run a search first.");
+      return;
+    }
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(lastBatchData, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `batch_export_${new Date().getTime()}.json`);
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  });
+}
 
-const exportSheetsBtn = document.getElementById("exportSheetsBtn");
-const exportStatus = document.getElementById("exportStatus");
-
-exportSheetsBtn.addEventListener("click", async () => {
-    if (!lastBatchData) return;
+// Export Sheets
+if (exportSheetsBtn && exportStatus) {
+  exportSheetsBtn.addEventListener("click", async () => {
+    if (!lastBatchData) {
+      alert("No data to export. Run a search first.");
+      return;
+    }
 
     exportSheetsBtn.disabled = true;
     exportSheetsBtn.textContent = 'Enviando...';
@@ -149,33 +172,37 @@ exportSheetsBtn.addEventListener("click", async () => {
     exportStatus.innerHTML = '<span style="color: #94a3b8;">Enviando dados para a Google Sheet...</span>';
 
     try {
-        const response = await fetch('/api/export-sheets', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(lastBatchData)
-        });
+      const response = await fetch('/api/export-sheets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(lastBatchData)
+      });
 
-        const result = await response.json();
+      const result = await response.json();
 
-        if (response.ok) {
-            exportStatus.innerHTML = `<span style="color: #10b981;">✓ Sucesso! Linhas adicionadas à Sheet.</span>`;
-        } else {
-            const errorMsg = result.details ? `${result.error} (${result.details})` : (result.error || 'Falha na exportação');
-            exportStatus.innerHTML = `<span style="color: #f43f5e;">✕ Erro: ${errorMsg}</span>`;
-        }
+      if (response.ok) {
+        exportStatus.innerHTML = `<span style="color: #10b981;">✓ Sucesso! Linhas adicionadas à Sheet.</span>`;
+      } else {
+        const errorMsg = result.details ? `${result.error} (${result.details})` : (result.error || 'Falha na exportação');
+        exportStatus.innerHTML = `<span style="color: #f43f5e;">✕ Erro: ${errorMsg}</span>`;
+      }
     } catch (error) {
-        exportStatus.innerHTML = `<span style="color: #f43f5e;">✕ Erro de conexão com o terminal.</span>`;
+      exportStatus.innerHTML = `<span style="color: #f43f5e;">✕ Erro de conexão: ${error.message}</span>`;
     } finally {
-        exportSheetsBtn.disabled = false;
-        exportSheetsBtn.textContent = 'Exportar Sheets';
-        setTimeout(() => { exportStatus.style.display = 'none'; }, 5000);
+      exportSheetsBtn.disabled = false;
+      exportSheetsBtn.textContent = 'Exportar Sheets';
+      setTimeout(() => { exportStatus.style.display = 'none'; }, 5000);
     }
-});
+  });
+}
 
-const syncFirebaseBtn = document.getElementById("syncFirebaseBtn");
-
-syncFirebaseBtn.addEventListener("click", async () => {
-    if (!lastBatchData) return;
+// Sync Firebase
+if (syncFirebaseBtn && exportStatus) {
+  syncFirebaseBtn.addEventListener("click", async () => {
+    if (!lastBatchData) {
+      alert("No data to sync. Run a search first.");
+      return;
+    }
 
     syncFirebaseBtn.disabled = true;
     syncFirebaseBtn.textContent = 'Sincronizando...';
@@ -183,24 +210,26 @@ syncFirebaseBtn.addEventListener("click", async () => {
     exportStatus.innerHTML = '<span style="color: #94a3b8;">Sincronizando dados com o Firebase...</span>';
 
     try {
-        const response = await fetch('/api/sync-firebase', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(lastBatchData)
-        });
+      const response = await fetch('/api/sync-firebase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(lastBatchData)
+      });
 
-        const result = await response.json();
+      const result = await response.json();
 
-        if (response.ok) {
-            exportStatus.innerHTML = `<span style="color: #fbbf24;">✓ Sucesso! Batch guardado no Firestore.</span>`;
-        } else {
-            exportStatus.innerHTML = `<span style="color: #f43f5e;">✕ Erro: ${result.error || 'Falha na sincronização'}</span>`;
-        }
+      if (response.ok) {
+        exportStatus.innerHTML = `<span style="color: #fbbf24;">✓ Sucesso! Batch guardado no Firestore.</span>`;
+      } else {
+        exportStatus.innerHTML = `<span style="color: #f43f5e;">✕ Erro: ${result.error || 'Falha na sincronização'}</span>`;
+      }
     } catch (error) {
-        exportStatus.innerHTML = `<span style="color: #f43f5e;">✕ Erro de conexão com o terminal.</span>`;
+      exportStatus.innerHTML = `<span style="color: #f43f5e;">✕ Erro de conexão: ${error.message}</span>`;
     } finally {
-        syncFirebaseBtn.disabled = false;
-        syncFirebaseBtn.textContent = 'Sincronizar Cloud';
-        setTimeout(() => { exportStatus.style.display = 'none'; }, 5000);
+      syncFirebaseBtn.disabled = false;
+      syncFirebaseBtn.textContent = 'Sincronizar Cloud';
+      setTimeout(() => { exportStatus.style.display = 'none'; }, 5000);
     }
-});
+  });
+}
+

@@ -15,35 +15,12 @@
         </p>
       </header>
 
-      <section class="controls-panel">
-        <div class="field">
-          <label for="source">Fonte</label>
-          <select id="source">
-            {% for source in sources %}
-            <option value="{{ source }}">
-              {{ source.replace('_', ' ').title() }}
-            </option>
-            {% endfor %}
-          </select>
-        </div>
-
-        <div class="field">
-          <label for="market">Mercado</label>
-          <select id="market">
-            {% for code, name in markets.items() %}
-            <option value="{{ code }}">{{ name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-      </section>
+<section class="batch-input-header">\n        <h2>🔍 Scraping Inteligente Automático</h2>\n        <p class="subtitle">Introduz apenas o ticker. O sistema deteta automaticamente o tipo de ativo e fontes.</p>\n      </section>
 
       <section class="batch-input">
-        <div class="field">
-          <label for="tickers">Tickers (um por linha ou separados por vírgula)</label>
-          <textarea id="tickers" rows="8" placeholder="Ex: AAPL&#10;MSFT&#10;NVDA"></textarea>
-        </div>
+        <div class="field">\n          <label for="tickers">Tickers (um por linha ou separados por vírgula)</label>\n          <textarea id="tickers" rows="8" placeholder="Ex: AAPL&#10;EDP&#10;PETR4&#10;BTC-USD&#10;VUAA.DE"></textarea>\n        </div>
         <div class="actions">
-          <button id="batchSearchBtn" class="btn-primary">Processar tickers</button>
+  <button id="batchSearchBtn" class="btn-primary">🚀 Scraping Inteligente (Auto)</button>
         </div>
       </section>
 

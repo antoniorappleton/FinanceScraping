@@ -14,6 +14,7 @@ from scraper.transformer import (
     flatten_scrape_result,
     build_ordered_columns
 )
+from scraper.intelligent_router import scrape_multi_source
 from scraper.firebase_manager import firebase_manager
 
 # Load environment variables
@@ -77,6 +78,18 @@ def search():
     if not ticker:
         return jsonify({"error": "Ticker em falta."}), 400
 
+    if not source or not market:
+        result = scrape_multi_source(ticker)
+        output_dir = Path("data/raw")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        market_detected = result.get("detected_market", "unknown")
+        asset_type = result.get("asset_type", "unknown")
+        output_file = output_dir / f"auto_{asset_type}_{market_detected}_{ticker}_{timestamp}.json"
+        with open(output_file, "w", encoding="utf-8") as file:
+            json.dump(result, file, indent=2, ensure_ascii=False)
+        return jsonify(result)
+
     if source not in SCRAPER_REGISTRY:
         return jsonify({"error": "Fonte inválida."}), 400
 
@@ -123,31 +136,72 @@ def search():
 @app.route("/api/search-batch", methods=["POST"])
 def search_batch():
     data = request.get_json(silent=True) or {}
-    
+
     raw_tickers = str(data.get("tickers", "")).strip()
     source = str(data.get("source", "")).strip()
     market = str(data.get("market", "")).strip().upper()
-    
+
     if not raw_tickers:
         return jsonify({"error": "Nenhum ticker fornecido."}), 400
-        
+
+    if not source or not market:
+        tickers = normalize_tickers_from_text(raw_tickers)
+        rows = []
+        errors = []
+        for i, ticker in enumerate(tickers):
+            if i > 0:
+                time.sleep(1.5)
+            try:
+                result = scrape_multi_source(ticker)
+                flat_row = flatten_scrape_result(result)
+                rows.append(flat_row)
+            except Exception as exc:
+                errors.append({
+                    "ticker": ticker,
+                    "error": str(exc)
+                })
+        columns = build_ordered_columns(rows)
+        payload = {
+            "source": "auto",
+            "market": "auto",
+            "tickers_requested": tickers,
+            "total_requested": len(tickers),
+            "total_success": len(rows),
+            "total_errors": len(errors),
+            "columns": columns,
+            "rows": rows,
+            "errors": errors,
+            "timestamp": datetime.now().isoformat()
+        }
+        # Persist batch result
+        try:
+            output_dir = Path("data/raw")
+            output_dir.mkdir(parents=True, exist_ok=True)
+            timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_file = output_dir / f"batch_auto_{timestamp_str}.json"
+            with open(output_file, "w", encoding="utf-8") as f:
+                json.dump(payload, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            print(f"Error saving auto batch: {e}")
+        return jsonify(payload)
+
     if source not in SCRAPER_REGISTRY:
         return jsonify({"error": "Fonte inválida."}), 400
-        
+
     if market not in SUPPORTED_MARKETS:
         return jsonify({"error": "Mercado inválido."}), 400
-        
+
     tickers = normalize_tickers_from_text(raw_tickers)
     scraper = SCRAPER_REGISTRY[source]
-    
+
     rows = []
     errors = []
-    
+
     for i, ticker in enumerate(tickers):
         # Apply delay between requests (except the first)
         if i > 0:
             time.sleep(1.5) # Configurable delay 1-2s
-            
+
         try:
             result = scraper.scrape_quote(ticker=ticker, market=market)
             flat_row = flatten_scrape_result(result)
@@ -157,9 +211,9 @@ def search_batch():
                 "ticker": ticker,
                 "error": str(exc)
             })
-            
+
     columns = build_ordered_columns(rows)
-    
+
     payload = {
         "source": source,
         "market": market,
@@ -172,20 +226,20 @@ def search_batch():
         "errors": errors,
         "timestamp": datetime.now().isoformat()
     }
-    
+
     # Persist batch result
     try:
         output_dir = Path("data/raw")
         output_dir.mkdir(parents=True, exist_ok=True)
         timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_file = output_dir / f"batch_{source}_{market}_{timestamp_str}.json"
-        
+
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(payload, f, indent=2, ensure_ascii=False)
     except Exception as e:
         # Don't fail the request if persistence fails, but log it
         print(f"Error saving batch: {e}")
-        
+
     return jsonify(payload)
 
 
@@ -193,22 +247,22 @@ def search_batch():
 def export_sheets():
     # Reload .env to ensure we pick up any recent manual edits
     load_dotenv(override=True)
-    
+
     data = request.get_json(silent=True) or {}
     webhook_url = os.getenv("G_SHEETS_WEBHOOK_URL")
     print(f"DEBUG: Using webhook URL: {webhook_url[:40]}...")
-    
+
     if not webhook_url or "COLE_O_URL" in webhook_url:
         return jsonify({"error": "URL da Google Sheet não configurado no .env"}), 400
-        
+
     if not data or "rows" not in data:
         return jsonify({"error": "Nenhum dado para exportar."}), 400
-        
+
     try:
         # Send data to Apps Script Webhook
         response = requests.post(webhook_url, json=data, timeout=30)
         response.raise_for_status()
-        
+
         return jsonify(response.json())
     except Exception as exc:
         import traceback
@@ -226,10 +280,10 @@ def sync_firebase():
     # Reload .env to pick up credentials path changes
     load_dotenv(override=True)
     data = request.get_json(silent=True) or {}
-    
+
     if not data or "rows" not in data:
         return jsonify({"error": "Nenhum dado para sincronizar."}), 400
-        
+
     # Check if Firebase is initialized
     if not firebase_manager.db:
         # Try to re-initialize in case .env was just fixed
@@ -242,9 +296,9 @@ def sync_firebase():
 
     # Use the new method that updates individual tickers in 'acoesDividendos'
     success = firebase_manager.save_batch_to_market_data(data)
-    
+
     if success:
-        return jsonify({"status": "success", "message": "Dados sincronizados com a colecao 'acoesDividendos'."})
+        return jsonify({"status": "success", "message": "Dados sincronizados com a coleção 'acoesDividendos'."})
     else:
         return jsonify({
             "error": "Erro ao sincronizar com o Firebase.",
@@ -253,4 +307,5 @@ def sync_firebase():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, port=5000)
+

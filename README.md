@@ -2,13 +2,7 @@
 
 Este projecto é uma ferramenta poderosa de extracção e automação de dados financeiros. Permite tanto a recolha manual através de uma interface web como a sincronização automática diária com a cloud.
 
-## ✨ Funcionalidades Principais
-
-### 🖥️ Terminal de Pesquisa (Manual)
-
-- **Pesquisa em lote**: Insira dezenas de tickers de uma vez (Finviz, Yahoo, Google Finance, Euronext).
-- **Euronext Lisboa**: Dados precisos e diretos para o mercado português.
-- **Exportação Direta**: Envia os dados para Google Sheets ou guarda localmente em JSON.
+## ✨ Funcionalidades Principais\n\n### 🧠 Scraping Inteligente Automático (Novo!)\n\n- **Detecção Automática**: O sistema deteta automaticamente o tipo de ativo (**ações**, **ETFs**, **criptomoedas**) e mercado (**US**, **Europa**, **Portugal**, **Brasil**, **Global**) a partir do ticker.\n- **Multi-Fonte**: Seleciona e combina as melhores fontes automaticamente:\n  - Ações US: Finviz + Yahoo + Google Finance\n  - Portugal: Euronext + Yahoo\n  - ETFs Europeus: JustETF + Yahoo\n  - Cripto: Yahoo Finance\n- **Consolidação Unificada**: Resultados de múltiplas fontes num objeto único.\n- **Frontend Simplificado**: Basta inserir o ticker, nada mais!\n\n### 📊 Funcionalidades Originais Mantidas\n- **Pesquisa em lote** e **exportação** para Google Sheets/Firestore.
 
 ### 🤖 Automação em Camadas (Cloud Sync)
 
@@ -129,23 +123,7 @@ Para sincronizar dados com a cloud:
 
 ---
 
-## 🚀 Como Usar
-
-1. **Escolha a Fonte**: Recomenda-se `finviz` para dados americanos ou `euronext` para portugueses.
-2. **Introduza os Tickers**: Cole a sua lista no campo de texto (um por linha ou separados por vírgula).
-3. **Processar**: Clique em **"Processar tickers"**. O programa vai percorrer a lista um a um.
-4. **Ver Resultados**: A tabela aparece automaticamente com os indicadores comparados.
-5. **Exportar**:
-   - Clique em **"Exportar JSON"** para guardar localmente.
-   - Clique em **"Exportar Sheets"** para enviar para a sua folha de cálculo.
-
-### 🇵🇹 Euronext (Ideal para Portugal)
-
-A fonte `euronext` foi desenhada para o mercado português (Lisboa) e europeu:
-
-- **Ticker Direto**: Não precisa de sufixo (ex: basta `EDP` ou `GALP`).
-- **Mapeamento Automático**: O terminal pesquisa o ISIN e o mercado (ex: XLIS) automaticamente.
-- **Métricas Locais**: Capitalização em Euros, Volume e variação real da bolsa de Lisboa.
+## 🚀 Novo Fluxo de Uso (Scraping Inteligente)\n\n1. **Introduz apenas o ticker** (ações, ETFs, cripto):\n   - Ações PT: `EDP` → Auto PT stock (Euronext + Yahoo)\n   - Ações US: `AAPL` → Auto US stock (Finviz + Yahoo + Google)\n   - ETFs: `VUAA.DE` → Auto ETF EU (JustETF + Yahoo)\n   - Cripto: `BTC-USD` → Auto Global crypto (Yahoo)\n2. **Clique \"Scraping Inteligente\"** → Sistema faz tudo automaticamente.\n3. **Resultados consolidados** multi-fonte numa tabela unificada.\n4. **Exporta** JSON/Sheets/Cloud como antes.\n\n**Exemplos**:\n```\nAAPL          → US Stock Multi-Fonte\nEDP           → PT Stock (Euronext)\nPETR4         → BR Stock (Yahoo)\nBTC-USD       → Crypto (Yahoo)\nVUAA.LS       → ETF PT/EU (JustETF)\n```\n\n### Modo Manual (Legacy)\nAdiciona `source=finviz&market=US` aos endpoints para uso avançado.
 
 ---
 
