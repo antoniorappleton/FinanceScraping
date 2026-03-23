@@ -8,9 +8,40 @@ from bs4 import BeautifulSoup
 from scraper.base import BaseScraper
 
 
+# ---------------------------------------------------------------------------
+# Known ticker → ISIN mapping for common EU ETFs.
+# This avoids relying on the JavaScript-rendered JustETF search page.
+# Add more entries here as needed.
+# ---------------------------------------------------------------------------
+TICKER_ISIN_MAP: Dict[str, str] = {
+    # iShares sector ETFs (XETRA / gettex, EUR)
+    "QDVE": "IE00B3WJKG14",   # S&P 500 IT
+    "QDVK": "IE00B4MCHD36",   # S&P 500 Consumer Discretionary
+    "QDVF": "IE00B3WJKN06",   # S&P 500 Financials
+    "IUIT": "IE00B3WJKG14",   # iShares S&P 500 IT (USD, LSE)
+    "IU5C": "IE00BDDRF478",   # iShares Core € Corp Bond
+    "2B7D": "IE00BDBRDM35",   # iShares USD Corp Bond
+    # Xtrackers
+    "XDWF": "IE00BM67HL84",   # Xtrackers MSCI World Financials
+    # Amundi / Lyxor
+    "G2X":  "LU1681048804",   # Lyxor MSCI World
+    "DAVV": "LU0392494992",   # Xtrackers MSCI World Swap
+    # Vanguard
+    "VUSA": "IE00B3XXRP09",   # Vanguard S&P 500
+    "VUAA": "IE00B3XXRP09",   # Vanguard S&P 500 (Acc)
+    "VUSD": "IE00B3XXRP09",   # Vanguard S&P 500 (USD)
+    # Misc
+    "EUNK": "IE00B3F81R35",   # iShares Core MSCI World
+    "JEDI": "IE00BFNM3P36",   # JPMorgan Global Equity
+    "VVMX": "IE00BKX55S42",   # Vanguard FTSE All-World
+    "VZLC": "IE00B3RBWM25",   # Vanguard FTSE All-World High Div
+}
+
+
 class JustETFScraper(BaseScraper):
     source_name = "justetf"
-    SEARCH_URL = "https://www.justetf.com/en/search.html"
+    # The JSON API endpoint resolves queries server-side (no JS needed)
+    API_URL     = "https://www.justetf.com/api/etfs"
     PROFILE_URL = "https://www.justetf.com/en/etf-profile.html"
 
     def __init__(self, pause_seconds: float = 1.5) -> None:
@@ -30,40 +61,58 @@ class JustETFScraper(BaseScraper):
         return re.sub(r"\s+", " ", value).strip()
 
     def search_ticker(self, query: str, market: str = "EU") -> List[Dict[str, Any]]:
-        params = {"query": query, "search": "ALL"}
-        response = self.session.get(self.SEARCH_URL, params=params, timeout=20)
-        response.raise_for_status()
-        time.sleep(self.pause_seconds)
-        
-        soup = BeautifulSoup(response.text, "lxml")
-        results = []
-        
-        # Look for the results table
-        table = soup.find("table")
-        if table:
-            rows = table.find_all("tr")[1:] # Skip header
-            for row in rows:
-                cols = row.find_all("td")
-                if len(cols) >= 2:
-                    name_link = cols[1].find("a")
-                    if name_link:
-                        name = self._clean_text(name_link.get_text())
-                        isin = ""
-                        # Try to find ISIN in the columns (usually the last or second to last)
-                        for col in cols:
-                            text = col.get_text().strip()
-                            if re.match(r"^[A-Z]{2}[0-9A-Z]{10}$", text):
-                                isin = text
-                                break
-                        
-                        results.append({
-                            "ticker": isin or query,
-                            "name": name,
-                            "exchange": "JustETF",
-                            "isin": isin
-                        })
-        
-        return results[:5]
+        """
+        Resolve a ticker to an ISIN using:
+          1. Local TICKER_ISIN_MAP  (instant, no network)
+          2. JustETF JSON API       (server-side search, no JS needed)
+        The old approach of scraping the HTML search page failed because
+        justETF renders its search results via JavaScript.
+        """
+        q = query.upper().strip()
+
+        # 1. Fast path: local map
+        if q in TICKER_ISIN_MAP:
+            isin = TICKER_ISIN_MAP[q]
+            return [{"ticker": q, "name": q, "exchange": "JustETF", "isin": isin}]
+
+        # 2. JustETF JSON API (requires Accept + Referer headers)
+        api_headers = {
+            **self.session.headers,
+            "Accept": "application/json, text/plain, */*",
+            "Referer": "https://www.justetf.com/en/find-etf.html",
+        }
+        params = {
+            "query": q,
+            "search": "ALL",
+            "locale": "en",
+            "valutaId": "EUR",
+        }
+        try:
+            r = self.session.get(self.API_URL, params=params,
+                                 headers=api_headers, timeout=15)
+            r.raise_for_status()
+            time.sleep(self.pause_seconds)
+            data = r.json()
+            results = []
+            for item in data.get("hits", data.get("results", []))[:5]:
+                isin = item.get("isin", "")
+                name = item.get("name", item.get("shortName", q))
+                if isin:
+                    # Cache for future calls
+                    TICKER_ISIN_MAP[q] = isin
+                    results.append({
+                        "ticker": q,
+                        "name": name,
+                        "exchange": "JustETF",
+                        "isin": isin,
+                    })
+            return results
+        except Exception as e:
+            # API failed – signal clearly so scrape_quote can raise a useful error
+            raise ValueError(
+                f"JustETF: could not resolve '{query}' via API ({e}). "
+                f"Add it to TICKER_ISIN_MAP in scraper/justetf.py."
+            ) from e
 
     def scrape_quote(self, ticker: str, market: str = "EU") -> Dict[str, Any]:
         # Ticker on JustETF is often an ISIN or we search for it
@@ -110,15 +159,15 @@ class JustETFScraper(BaseScraper):
         # 3. Key facts panels (common JustETF classes)
         panels = soup.find_all(["div", "span"], class_=re.compile(r"(fact|key|info|val|metric|data)"))
         for panel in panels:
-            label_elem = panel.find(["strong", "label", "dt", ".label", "[class*='label']"])
-            value_elem = panel.find(["span", "dd", ".value", "[class*='value']"]) or panel
+            label_elem = panel.find(["strong", "label", "dt"])
+            value_elem = panel.find(["span", "dd"]) or panel
             if label_elem:
                 k = self._clean_text(label_elem.get_text())
                 if k:
                     v_elem = value_elem.find_next_sibling() or value_elem
                     v = self._clean_text(v_elem.get_text())
                     if v and k not in metrics:
-                        metrics[key] = v
+                        metrics[k] = v  # BUG FIX: was `metrics[key]` (outer-loop var)
 
         # 4. Specific JustETF structures
         fact_rows = soup.find_all("div", class_=re.compile(r"fact-row|key-fact"))
