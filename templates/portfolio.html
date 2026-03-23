@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="pt">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ ticker }} - ETF Portfolio Analysis | FinanceScraping</title>
+    <link rel="stylesheet" href="/static/style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+    <nav style="padding: 1rem; background: #1f2937; color: white;">
+      <a href="/" style="color: white; margin-right: 1rem;">← Back to Scraper</a>
+      <span>ETF: {{ ticker }}</span>
+    </nav>
+    <main class="container" style="max-width: 1400px;">
+      <header style="text-align: center; padding: 2rem 0;">
+        <h1>{{ ticker }} Analysis</h1>
+        <p>S&P 500 Communication Sector UCITS ETF | Profit Maximization Signals</p>
+      </header>
+
+      <section id="signal-section" class="hero-signal" style="text-align: center; padding: 2rem; margin: 2rem 0; border-radius: 12px;">
+        <div id="signal-badge" style="font-size: 2.5rem; font-weight: bold; padding: 1rem 2rem; border-radius: 50px; display: inline-block;"></div>
+        <div id="score-display" style="font-size: 1.2rem; margin-top: 1rem; opacity: 0.9;">Score: -- | Alloc: -- | Risk: -- | Trend: --</div>
+      </section>
+
+      <section class="portfolio-grid">
+        <!-- Perf Table -->
+        <div class="card">
+          <h3>📈 Performance</h3>
+          <table id="perf-table" class="data-table">
+            <thead><tr><th>Period</th><th>Return</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <!-- Risk Cards -->
+        <div class="card">
+          <h3>⚠️ Risk Metrics</h3>
+          <div id="risk-cards" class="metric-grid"></div>
+        </div>
+
+        <!-- Alloc Suggestion -->
+        <div class="card">
+          <h3>💼 Allocation</h3>
+          <div id="alloc-section">
+            <div id="alloc-badge" style="font-size: 3rem; font-weight: bold; padding: 1rem;"></div>
+            <p id="alloc-desc">Suggested portfolio weight based on score & risk</p>
+            <div id="warnings" style="margin-top: 1rem; color: #dc2626;"></div>
+          </div>
+        </div>
+
+        <!-- Holdings Pie -->
+        <div class="card" style="grid-column: span 2;">
+          <h3>📊 Top Holdings</h3>
+          <canvas id="holdings-chart" width="400" height="400"></canvas>
+          <div id="top-holdings-list"></div>
+        </div>
+
+        <!-- Fund Facts -->
+        <div class="card">
+          <h3>🏛️ Fund Details</h3>
+          <div id="fund-facts" class="metric-grid"></div>
+        </div>
+
+        <!-- Raw Data -->
+        <div class="card" style="grid-column: span 2;">
+          <h3>🔍 Raw Metrics (JustETF)</h3>
+          <div id="raw-metrics" style="font-family: monospace; font-size: 0.85rem; max-height: 300px; overflow: auto;"></div>
+        </div>
+      </section>
+    </main>
+
+    <script src="/static/portfolio.js"></script>
+    <script>
+      // Load data on page load
+      const urlParams = new URLSearchParams(window.location.search);
+      const ticker = urlParams.get('ticker') || '{{ ticker }}';
+      loadPortfolioData(ticker);
+    </script>
+  </body>
+</html>

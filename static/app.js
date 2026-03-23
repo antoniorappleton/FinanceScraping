@@ -17,6 +17,13 @@ let lastBatchData = null;
 let recentBatches = [];
 
 const loadRecentBtn = document.getElementById("loadRecentBtn");
+const portfolioLink = document.createElement("a");
+portfolioLink.href = "/portfolio?ticker=IU5C";
+portfolioLink.className = "btn-primary";
+portfolioLink.textContent = "💼 Portfolio IU5C";
+portfolioLink.target = "_blank";
+portfolioLink.style.marginLeft = "10px";
+loadRecentBtn.parentNode.insertBefore(portfolioLink, loadRecentBtn.nextSibling);
 const recentSelect = document.getElementById("recentSelect");  // Will add dynamically
 
 function checkElements() {

@@ -133,6 +133,115 @@ def search():
     }), 500 if "NotImplementedError" not in error_msg else 501
 
 
+@app.route("/api/analyze-etf", methods=["GET"])
+def analyze_etf():
+    ticker = request.args.get("ticker", "IU5C").upper().strip()
+    if not ticker:
+        return jsonify({"error": "Ticker required"}), 400
+    
+    try:
+        # Scrape via intelligent multi-source (prioritizes justetf for ETFs)
+        raw_data = scrape_multi_source(ticker)
+        metrics = raw_data.get("metrics", {})
+        
+        # Enhanced Profit Max Algo per approved plan
+        def safe_float(k, default=0.0):
+            v = metrics.get(k, default)
+            return float(v) if v is not None else default
+        
+        # Annualized returns
+        ret_1y = safe_float("1_year")
+        ret_3y = safe_float("3_years")
+        ret_5y = safe_float("5_years")
+        ann_3y = (1 + ret_3y) ** (1/3) - 1 if ret_3y > -1 else 0.0
+        ann_5y = (1 + ret_5y) ** (1/5) - 1 if ret_5y > -1 else 0.0
+        
+        # Momentum & Risk
+        mom_6m = safe_float("6_months")
+        vol_1y = safe_float("volatility_1_year")
+        dd_3y = safe_float("maximum_drawdown_3_years")
+        rpr_3y = safe_float("return_per_risk_3_years")
+        
+        risk_score = 0.5 * vol_1y + 0.5 * abs(dd_3y)
+        risk_level = "Low" if risk_score < 0.15 else "Medium" if risk_score < 0.25 else "High"
+        
+        # Weighted Score
+        score = (0.25 * ann_3y + 0.25 * ann_5y + 
+                 0.20 * rpr_3y + 0.15 * mom_6m + 
+                 0.15 * (1 - vol_1y))
+        score = max(0, min(1, score))  # Clamp 0-1
+        
+        # Signal w/ filters
+        base_signal = "STRONG BUY" if score > 0.75 else "BUY" if score > 0.60 else "HOLD" if score > 0.45 else "AVOID"
+        signal = base_signal
+        trend = "Neutral"
+        if mom_6m < 0:
+            signal = "HOLD" if "BUY" in signal else signal  # Downgrade
+            trend = "Downtrend" if safe_float("3_months") < 0 else "Weak Momentum"
+        
+        # Alloc suggestion (risk-adjusted, cap 20%)
+        alloc_pct = int(score * (1 - risk_score) * 20)
+        alloc_pct = min(alloc_pct, 20)
+        
+        # Div warnings
+        sector_max = safe_float("telecommunication")  # Example top sector
+        geo_us = safe_float("united_states")
+        warnings = []
+        if sector_max > 0.25:
+            warnings.append("High sector concentration (>25%)")
+        if geo_us > 0.30:
+            warnings.append("High geo concentration (>30%)")
+        
+        # Top holdings for pie (all % keys ending digits)
+        holdings = {k: v for k, v in metrics.items() if k.endswith(("_a", "_c")) or k in ["meta_platforms", "netflix", "comcast", "verizon_communications", "at&t", "walt_disney", "warner_bros_discovery", "t_mobile_us"] and isinstance(v, (int, float))}
+        top_holdings = dict(sorted(holdings.items(), key=lambda x: x[1], reverse=True)[:8])
+        
+        analysis = {
+            "ticker": ticker,
+            "raw_metrics": metrics,
+            "perf": {
+                "1m": safe_float("1_month"),
+                "3m": safe_float("3_months"),
+                "6m": mom_6m,
+                "1y": ret_1y,
+                "ann_3y": ann_3y,
+                "ann_5y": ann_5y,
+            },
+            "risk": {
+                "vol_1y": vol_1y,
+                "dd_3y": dd_3y,
+                "risk_score": risk_score,
+                "risk_level": risk_level
+            },
+            "algo": {
+                "score": round(score, 3),
+                "signal": signal,
+                "trend": trend,
+                "alloc_pct": f"{alloc_pct}%",
+                "warnings": warnings
+            },
+            "holdings": top_holdings,
+            "fund": {
+                "ter": metrics.get("total_expense_ratio", "N/A"),
+                "fund_size": metrics.get("fund_size", "N/A"),
+                "replication": metrics.get("replication", "N/A")
+            }
+        }
+        
+        # Save analyzed data
+        output_dir = Path("data/raw")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_file = output_dir / f"analyzed_etf_{ticker}_{timestamp}.json"
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(analysis, f, indent=2, ensure_ascii=False)
+        
+        return jsonify(analysis)
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/search-batch", methods=["POST"])
 def search_batch():
     data = request.get_json(silent=True) or {}
@@ -220,6 +329,12 @@ def export_sheets():
             "details": str(exc),
             "traceback": error_details
         }), 500
+
+
+@app.route("/portfolio", methods=["GET"])
+def portfolio():
+    ticker = request.args.get("ticker", "IU5C").upper()
+    return render_template("portfolio.html", ticker=ticker)
 
 
 @app.route("/api/load-recent")

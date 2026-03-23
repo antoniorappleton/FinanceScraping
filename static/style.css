@@ -295,3 +295,77 @@ tr:hover {
   color: #94a3b8;
 }
 
+/* Portfolio Styles */
+.portfolio-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.card {
+  background: #1e293b;
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid #334155;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.metric-card {
+  background: #334155;
+  padding: 1rem;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.metric-card strong {
+  display: block;
+  font-size: 0.9rem;
+  color: #e2e8f0;
+  margin-bottom: 0.25rem;
+}
+
+.metric-card span {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #38bdf8;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th, .data-table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #475569;
+}
+
+.hero-signal {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  border: 1px solid #475569;
+}
+
+#signal-badge {
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  min-width: 200px;
+}
+
+#holdings-chart {
+  max-height: 300px;
+  margin: 0 auto;
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .portfolio-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
