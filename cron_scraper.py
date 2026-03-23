@@ -61,9 +61,12 @@ def run_automated_scrape(mode="full"):
                 
                 result = scraper.scrape_quote(ticker=ticker, market=market)
                 metrics = result.get("metrics", {})
+                method_used = result.get("method", "scrape")
+                if metrics.get("yf_success"):
+                    logger.info(f"{ticker}: Using robust yfinance data ({method_used})")
                 
                 # Universal extraction attempt
-                price_str = result.get("title", {}).get("price") or metrics.get("price") or metrics.get("Price")
+                price_str = metrics.get("valorStock") or result.get("title", {}).get("price") or metrics.get("price") or metrics.get("Price")
                 change_str = metrics.get("change_pct") or metrics.get("Change") or metrics.get("Net Change")
                 market_cap_str = metrics.get("Market Cap") or metrics.get("Market Cap (intraday)") or metrics.get("MarketCap")
 
@@ -73,7 +76,8 @@ def run_automated_scrape(mode="full"):
                         "valorStock": clean_float(price_str),
                         "priceChange_1d": clean_float(change_str),
                         "marketCap": clean_float(market_cap_str),
-                        "source_used": source_name,
+                        "source_used": f"{source_name} ({method_used})",
+                        "method_used": method_used,
                         "nome": result.get("title", {}).get("company", ticker)
                     }
                 else:
@@ -81,8 +85,9 @@ def run_automated_scrape(mode="full"):
                     yield_str = metrics.get("Forward Dividend & Yield") or metrics.get("Dividend Yield") or metrics.get("Yield") or metrics.get("Dividend %")
                     pe_str = metrics.get("PE Ratio (TTM)") or metrics.get("P/E Ratio") or metrics.get("PE") or metrics.get("pe")
                     ebitda_str = metrics.get("EBITDA") or metrics.get("ebitda")
-                    perf_1w_str = metrics.get("Perf Week")
-                    perf_1y_str = metrics.get("Perf Year")
+                    perf_1w_str = metrics.get("priceChange_1w") or metrics.get("Perf Week")
+                    perf_1y_str = metrics.get("priceChange_1y") or metrics.get("Perf Year")
+                    perf_1m_str = metrics.get("priceChange_1m")
                     roa_str = metrics.get("ROA")
                     roe_str = metrics.get("ROE")
                     roi_str = metrics.get("ROI")
@@ -94,6 +99,7 @@ def run_automated_scrape(mode="full"):
                         "priceChange_1d": clean_float(change_str),
                         "priceChange_1w": clean_float(perf_1w_str),
                         "priceChange_1y": clean_float(perf_1y_str),
+                        "priceChange_1m": clean_float(perf_1m_str),
                         "yield": clean_float(yield_str),
                         "dividendValue": clean_float(dividend_val_str),
                         "pe": clean_float(pe_str),
@@ -120,7 +126,8 @@ def run_automated_scrape(mode="full"):
                         "target_price": clean_float(metrics.get("Target Price")),
                         "volatility": clean_float(metrics.get("Volatility")),
 
-                        "source_used": source_name,
+                        "source_used": f"{source_name} ({method_used})",
+                        "method_used": method_used,
                         "nome": result.get("title", {}).get("company", ticker),
                         "lastFullSync": datetime.now().isoformat()
                     }

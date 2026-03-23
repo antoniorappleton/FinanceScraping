@@ -4,3 +4,4 @@ beautifulsoup4
 lxml
 python-dotenv
 firebase-admin
+yfinance==0.2.43

@@ -3,6 +3,7 @@ import time
 from typing import Any, Dict, List, Optional
 
 import requests
+import yfinance as yf
 from bs4 import BeautifulSoup
 
 from scraper.base import BaseScraper
@@ -66,35 +67,112 @@ class YahooFinanceScraper(BaseScraper):
         
         return data
 
+    def _get_yfinance_data(self, ticker: str, market: str) -> Optional[Dict[str, Any]]:
+        """Robust yfinance API fetch + computed intervals."""
+        try:
+            normalized_ticker = BaseScraper.normalize_ticker(ticker, market)
+            stock = yf.Ticker(normalized_ticker)
+            
+            # Current data
+            info = stock.info
+            hist = stock.history(period="2y", interval="1d")  # Daily for changes
+            
+            if hist.empty or len(hist) < 5:
+                return None
+            
+            current_price = info.get('currentPrice') or info.get('regularMarketPrice') or hist['Close'].iloc[-1]
+            
+            # Compute intervals (trading days approx)
+            changes = {}
+            periods = {
+                '1w': 5,   # 1 week ~5 trading days
+                '1m': 21,  # 1 month ~21
+                '1y': 252  # 1 year ~252
+            }
+            
+            for interval, days_back in periods.items():
+                if len(hist) >= days_back + 1:
+                    past_close = hist['Close'].iloc[-(days_back + 1)]
+                    change_pct = ((current_price - past_close) / past_close) * 100
+                    changes[f'priceChange_{interval}'] = round(change_pct, 2)
+            
+            # Fallback if no info fields
+            ticker_used = normalized_ticker
+            company_name = info.get('longName') or info.get('shortName') or normalized_ticker
+            
+            data = {
+                'yf_success': True,
+                'valorStock': float(current_price),
+                **changes,
+                'marketCap': info.get('marketCap'),
+                'pe': info.get('trailingPE') or info.get('forwardPE'),
+                'yield': info.get('dividendYield'),
+                'company': company_name,
+                'ticker': ticker_used
+            }
+            
+            # Add all info keys cleaned
+            for k, v in info.items():
+                if isinstance(v, (int, float)):
+                    data[f'info_{k.lower().replace(" ", "_")}'] = v
+            
+            return data
+            
+        except Exception as e:
+            print(f"yfinance error for {ticker}: {e}")
+            return None
+
     def search_ticker(self, query: str, market: str) -> List[Dict[str, Any]]:
         results = []
         normalized = BaseScraper.normalize_ticker(query, market)
         
-        # Simple validation by trying quote page
-        try:
-            html = self._get_html(normalized)
-            soup = BeautifulSoup(html, "lxml")
-            summary = self._parse_summary(soup)
-            if summary.get("company"):
-                results.append({
-                    "ticker": normalized,
-                    "name": summary["company"],
-                    "exchange": market
-                })
-        except:
-            pass
+        # Use yfinance for search too
+        yf_data = self._get_yfinance_data(normalized, market)
+        if yf_data:
+            results.append({
+                "ticker": yf_data['ticker'],
+                "name": yf_data['company'],
+                "exchange": market
+            })
         
-        # Yahoo search simulation: https://finance.yahoo.com/quote?q=QUERY but parsing list
-        # Placeholder: return normalized if valid-like
         if not results:
-            results = [{"ticker": normalized, "name": f"Search '{query}'", "exchange": market}]
+            # Fallback to HTML search
+            try:
+                html = self._get_html(normalized)
+                soup = BeautifulSoup(html, "lxml")
+                summary = self._parse_summary(soup)
+                if summary.get("company"):
+                    results.append({
+                        "ticker": normalized,
+                        "name": summary["company"],
+                        "exchange": market
+                    })
+            except:
+                pass
         
         return results[:5]
 
     def scrape_quote(self, ticker: str, market: str) -> Dict[str, Any]:
-        normalized_ticker = BaseScraper.normalize_ticker(ticker, market)
+        """Try yfinance first (robust), fallback to HTML scrape."""
+        # Primary: yfinance
+        yf_data = self._get_yfinance_data(ticker, market)
+        if yf_data:
+            return {
+                "source": self.source_name,
+                "method": "yfinance",
+                "market": market,
+                "ticker_requested": ticker,
+                "ticker_used": yf_data['ticker'],
+                "url": f"{self.BASE_URL}/{yf_data['ticker']}",
+                "title": {
+                    "ticker": yf_data['ticker'],
+                    "company": yf_data['company']
+                },
+                "metrics": yf_data
+            }
         
-        # Try original first
+        # Fallback: HTML scrape (existing logic)
+        normalized_ticker = BaseScraper.normalize_ticker(ticker, market)
         orig_ticker = ticker.strip().upper()
         try:
             html = self._get_html(orig_ticker)
@@ -105,7 +183,6 @@ class YahooFinanceScraper(BaseScraper):
             else:
                 raise ValueError("No metrics")
         except:
-            # Fallback to normalized
             html = self._get_html(normalized_ticker)
             soup = BeautifulSoup(html, "lxml")
             summary = self._parse_summary(soup)
@@ -115,6 +192,7 @@ class YahooFinanceScraper(BaseScraper):
 
         return {
             "source": self.source_name,
+            "method": "html_scrape",
             "market": market,
             "ticker_requested": ticker,
             "ticker_used": ticker_used,

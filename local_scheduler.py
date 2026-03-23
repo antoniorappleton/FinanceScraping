@@ -1,6 +1,7 @@
 import time
 import subprocess
 import sys
+import argparse
 from datetime import datetime, timedelta
 
 def run_scraper(mode="fast"):
@@ -16,39 +17,46 @@ def run_scraper(mode="fast"):
     except Exception as e:
         print(f"[ {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ] Error running scraper: {e}")
 
-def start_scheduler(interval_hours=4):
+def parse_interval(arg):
+    """Parse interval like '10m', '4h', or '240' to minutes."""
+    if arg.endswith('h'):
+        return int(arg[:-1]) * 60
+    elif arg.endswith('m'):
+        return int(arg[:-1])
+    else:
+        return int(arg)
+
+def start_scheduler(interval_minutes=240):  # Default 4 hours
     """
     Background scheduler loop.
-    Runs a fast sync immediately, then every X hours.
+    Runs fast sync every interval_minutes, full on Sundays.
     """
     print("="*60)
     print("        LOCAL SCRAPER SCHEDULER (BYPASS GITHUB BILLING)")
     print("="*60)
-    print(f"Interval: Every {interval_hours} hours")
-    print("Press Ctrl+C to stop the scheduler.")
+    print(f"Interval: Every {interval_minutes//60 if interval_minutes >=60 else interval_minutes}m")
+    print("Press Ctrl+C to stop.")
     
     try:
         last_full_sync_date = None
         while True:
             now = datetime.now()
-            # If it's Sunday and we haven't done a full sync today
-            if now.weekday() == 6 and last_full_sync_date != now.date():
-                run_scraper(mode="full")
+            if now.weekday() == 6 and last_full_sync_date != now.date():  # Sunday
+                run_scraper("full")
                 last_full_sync_date = now.date()
-                # Also do a fast sync for price updates
-                run_scraper(mode="fast")
-            else:
-                run_scraper(mode="fast")
+            run_scraper("fast")
             
-            next_run = datetime.now() + timedelta(hours=interval_hours)
-            print(f"\nSleeping for {interval_hours} hours...")
-            print(f"Next sync scheduled for: {next_run.strftime('%Y-%m-%d %H:%M:%S')}")
+            next_run = datetime.now() + timedelta(minutes=interval_minutes)
+            print(f"\nSleeping for {interval_minutes} min...")
+            print(f"Next at: {next_run.strftime('%Y-%m-%d %H:%M:%S')}")
             
-            time.sleep(interval_hours * 3600)
-            
+            time.sleep(interval_minutes * 60)
     except KeyboardInterrupt:
-        print("\nScheduler stopped by user. Goodbye!")
+        print("\nStopped.")
 
 if __name__ == "__main__":
-    # If passed as an argument, we could handle different intervals
-    start_scheduler(interval_hours=4)
+    parser = argparse.ArgumentParser(description="Local scheduler for market scraper")
+    parser.add_argument("--interval-minutes", "-i", type=str, default="240", help="Interval (e.g. '10m', '4h', 240)")
+    args = parser.parse_args()
+    min_interval = parse_interval(args.interval_minutes)
+    start_scheduler(interval_minutes=min_interval)
