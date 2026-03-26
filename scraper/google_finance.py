@@ -15,7 +15,7 @@ class GoogleFinanceScraper(BaseScraper):
     EXCHANGE_MAP = {
         "US": "NYSE,NASDAQ",
         "EU": "FRA,XETR",
-        "PT": "LIS",
+        "PT": "ELI",
         "BR": "BVMF",
         "LON": "LON",
     }

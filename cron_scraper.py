@@ -29,48 +29,59 @@ def run_automated_scrape(mode="full"):
     logger.info(f"Starting automated scraping ({mode.upper()} sync)...")
     
     # 1. Get tickers from Firestore
-    tickers = firebase_manager.get_all_tickers()
-    if not tickers:
+    try:
+        docs = firebase_manager.db.collection("acoesDividendos").stream()
+        ticker_data = []
+        for d in docs:
+            data = d.to_dict()
+            ticker = data.get("ticker", d.id).upper()
+            market = data.get("mercado", "")
+            ticker_data.append({"ticker": ticker, "market_name": market})
+    except Exception as e:
+        logger.error(f"Error fetching tickers: {e}")
+        return
+
+    if not ticker_data:
         logger.warning("No tickers found in 'acoesDividendos' collection or Firebase not initialized.")
         return
 
-    logger.info(f"Found {len(tickers)} tickers to process: {tickers}")
+    # Sort: Portugal first
+    ticker_data.sort(key=lambda x: x.get("market_name") != "Portugal")
+
+    logger.info(f"Found {len(ticker_data)} tickers to process.")
     
-    # 2. Iterate and Scrape
-    # Pre-select scrapers (Preference order)
-    # Defaulting to yahoo for US/General, or euronext for EU/PT if needed.
-    # For simplicity, we'll try Yahoo first, then Google Finance.
-    
-    for ticker in tickers:
-        logger.info(f"Processing: {ticker}")
-        
+    for item in ticker_data:
+        ticker = item["ticker"]
+        market_name = item["market_name"]
+        # Detect market code
+        market_code = "US" 
+        if market_name == "Portugal" or "." in ticker:
+            market_code = "PT"
+            
         success = False
-        # Try multiple scrapers if one fails
-        for source_name in ["yahoo", "google_finance", "finviz"]:
+        # Try multiple scrapers in order
+        sources_to_try = ["yahoo", "google_finance", "finviz"]
+        
+        # Avoid Finviz for PT/EU stocks to prevent US ticker data pollution
+        if market_code != "US":
+            sources_to_try = ["yahoo", "google_finance"]
+
+        for source_name in sources_to_try:
             if source_name not in SCRAPER_REGISTRY:
                 continue
                 
             scraper = SCRAPER_REGISTRY[source_name]
             try:
-                # Attempt to scrape (assuming Americano/US as default, or detecting market from ticker)
-                # For this automation, we assume US or generic market for simplicity, 
-                # or we could extend the 'tickers' collection to include market.
-                market = "US" 
-                if "." in ticker: # e.g. EDP.LS or similar
-                    market = "PT"
-                
-                result = scraper.scrape_quote(ticker=ticker, market=market)
+                result = scraper.scrape_quote(ticker=ticker, market=market_code)
                 metrics = result.get("metrics", {})
                 method_used = result.get("method", "scrape")
-                if metrics.get("yf_success"):
-                    logger.info(f"{ticker}: Using robust yfinance data ({method_used})")
                 
                 # Universal extraction attempt
-                price_str = metrics.get("valorStock") or result.get("title", {}).get("price") or metrics.get("price") or metrics.get("Price")
-                change_str = metrics.get("change_pct") or metrics.get("Change") or metrics.get("Net Change")
-                market_cap_str = metrics.get("Market Cap") or metrics.get("Market Cap (intraday)") or metrics.get("MarketCap")
+                price_str = metrics.get("valorStock") or result.get("title", {}).get("price") or metrics.get("price")
+                change_str = metrics.get("change_pct") or metrics.get("Change")
+                market_cap_str = metrics.get("Market Cap") or metrics.get("marketCap")
 
-                # Build Payload based on mode
+                # Build Payload
                 if mode == "fast":
                     payload = {
                         "valorStock": clean_float(price_str),
@@ -82,64 +93,36 @@ def run_automated_scrape(mode="full"):
                     }
                 else:
                     # Full Sync Indicators
-                    yield_str = metrics.get("Forward Dividend & Yield") or metrics.get("Dividend Yield") or metrics.get("Yield") or metrics.get("Dividend %")
-                    pe_str = metrics.get("PE Ratio (TTM)") or metrics.get("P/E Ratio") or metrics.get("PE") or metrics.get("pe")
-                    ebitda_str = metrics.get("EBITDA") or metrics.get("ebitda")
-                    perf_1w_str = metrics.get("priceChange_1w") or metrics.get("Perf Week")
-                    perf_1y_str = metrics.get("priceChange_1y") or metrics.get("Perf Year")
-                    perf_1m_str = metrics.get("priceChange_1m")
-                    roa_str = metrics.get("ROA")
-                    roe_str = metrics.get("ROE")
-                    roi_str = metrics.get("ROI")
-                    dividend_val_str = metrics.get("Dividend")
-
-                    # Initialize payload with fixed/cleaned fields
                     payload = {
                         "valorStock": clean_float(price_str),
                         "priceChange_1d": clean_float(change_str),
-                        "priceChange_1w": clean_float(perf_1w_str),
-                        "priceChange_1y": clean_float(perf_1y_str),
-                        "priceChange_1m": clean_float(perf_1m_str),
-                        "yield": clean_float(yield_str),
-                        "dividendValue": clean_float(dividend_val_str),
-                        "pe": clean_float(pe_str),
-                        "roa": clean_float(roa_str),
-                        "roe": clean_float(roe_str),
-                        "roi": clean_float(roi_str),
+                        "priceChange_1w": clean_float(metrics.get("priceChange_1w") or metrics.get("Perf Week")),
+                        "priceChange_1y": clean_float(metrics.get("priceChange_1y") or metrics.get("Perf Year")),
+                        "priceChange_1m": clean_float(metrics.get("priceChange_1m")),
+                        "yield": clean_float(metrics.get("yield") or metrics.get("Dividend Yield")),
+                        "pe": clean_float(metrics.get("pe") or metrics.get("PE Ratio (TTM)")),
+                        "roa": clean_float(metrics.get("roa") or metrics.get("ROA")),
+                        "roe": clean_float(metrics.get("roe") or metrics.get("ROE")),
+                        "roi": clean_float(metrics.get("roi") or metrics.get("ROI")),
+                        "rsi": clean_float(metrics.get("rsi")),
+                        "roic": clean_float(metrics.get("roic")),
+                        "ev_ebitda": clean_float(metrics.get("ev_ebitda") or metrics.get("EV/EBITDA")),
                         "marketCap": clean_float(market_cap_str),
-                        "ebitda": clean_float(ebitda_str),
+                        "ebitda": clean_float(metrics.get("ebitda") or metrics.get("EBITDA")),
                         
-                        # New Requested Indicators
-                        "dividend_est": clean_float(metrics.get("Dividend Est.")),
-                        "dividend_ex_date": metrics.get("Dividend Ex-Date"), # Keep date as string
-                        "dividend_gr_3_5y": clean_float(metrics.get("Dividend Gr. 3/5Y")),
-                        "eps_next_q": clean_float(metrics.get("EPS next Q")),
-                        "eps_next_y": clean_float(metrics.get("EPS next Y")),
-                        "eps_this_y": clean_float(metrics.get("EPS this Y")),
-                        "ev_ebitda": clean_float(metrics.get("EV/EBITDA")),
-                        "enterprise_value": clean_float(metrics.get("Enterprise Value")),
-                        "p_b": clean_float(metrics.get("P/B")),
-                        "perf_half_y": clean_float(metrics.get("Perf Half Y")),
-                        "perf_quarter": clean_float(metrics.get("Perf Quarter")),
-                        "sma200": clean_float(metrics.get("SMA200")),
-                        "sma50": clean_float(metrics.get("SMA50")),
-                        "target_price": clean_float(metrics.get("Target Price")),
-                        "volatility": clean_float(metrics.get("Volatility")),
-
                         "source_used": f"{source_name} ({method_used})",
                         "method_used": method_used,
                         "nome": result.get("title", {}).get("company", ticker),
                         "lastFullSync": datetime.now().isoformat()
                     }
 
-                    # Add ALL other metrics from the scraper, cleaned
+                    # Add other cleaned metrics
                     cleaned_metrics = clean_row_for_firestore(metrics)
                     for k, v in cleaned_metrics.items():
                         if k not in payload:
                             payload[k] = v
                 
                 # 3. Update Firestore
-                logger.info(f"Sending {len(payload)} fields to Firestore for {ticker}: {list(payload.keys())}")
                 if firebase_manager.update_market_data(ticker, payload):
                     logger.info(f"{ticker} updated ({mode}) via {source_name}")
                     success = True
@@ -147,12 +130,14 @@ def run_automated_scrape(mode="full"):
                 
             except Exception as e:
                 logger.error(f"Error scraping {ticker} with {source_name}: {e}")
-                continue # Try next scraper
+                if "429" in str(e):
+                    logger.warning("Rate limit hit. Sleeping longer...")
+                    time.sleep(10)
+                continue 
         
         if not success:
             logger.error(f"Failed to update {ticker} after trying all sources.")
         
-        # Delay to avoid blocking
         time.sleep(2)
 
     logger.info(f"Automated {mode} scraping session finished.")

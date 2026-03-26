@@ -1,134 +1,94 @@
 # 🚀 Market Scraper Terminal & Automation
 
-Este projecto é uma ferramenta poderosa de extracção e automação de dados financeiros. Permite tanto a recolha manual através de uma interface web como a sincronização automática diária com a cloud.
+Este projeto é uma ferramenta avançada de extração, análise e automação de dados financeiros. Integra múltiplas fontes globais para fornecer uma visão 360º de ações, ETFs e Criptomoedas, com sincronização nativa para Firebase e Google Sheets.
 
-## ✨ Funcionalidades Principais\n\n### 🧠 Scraping Inteligente Automático (Novo!)\n\n- **Detecção Automática**: O sistema deteta automaticamente o tipo de ativo (**ações**, **ETFs**, **criptomoedas**) e mercado (**US**, **Europa**, **Portugal**, **Brasil**, **Global**) a partir do ticker.\n- **Multi-Fonte**: Seleciona e combina as melhores fontes automaticamente:\n  - Ações US: Finviz + Yahoo + Google Finance\n  - Portugal: Euronext + Yahoo\n  - ETFs Europeus: JustETF + Yahoo\n  - Cripto: Yahoo Finance\n- **Consolidação Unificada**: Resultados de múltiplas fontes num objeto único.\n- **Frontend Simplificado**: Basta inserir o ticker, nada mais!\n\n### 📊 Funcionalidades Originais Mantidas\n- **Pesquisa em lote** e **exportação** para Google Sheets/Firestore.
+## ✨ Funcionalidades Principais
 
-### 🤖 Automação em Camadas (Cloud Sync)
+### 🧠 Scraping Inteligente Automático
+- **Motores de Decisão**: O sistema identifica automaticamente o tipo de ativo e o mercado (**US**, **Europa**, **Portugal**, **Brasil**, **Global**) a partir do formato do ticker.
+- **Ecossistema Multi-Fonte**: Combina dados de fontes líderes para máxima precisão:
+  - **Ações Portugal (PSI)**: Euronext (Live) + Yahoo Finance + Google Finance.
+  - **Ações US (SP500/Nasdaq)**: Finviz + Yahoo Finance + Google Finance.
+  - **ETFs Europeus**: JustETF (Específico) + Yahoo Finance.
+  - **Criptomoedas**: Yahoo Finance (Dados em tempo real).
+- **Consolidação de Indicadores**: Une dados fundamentais e técnicos num único registo.
 
-Para otimizar recursos e garantir dados sempre frescos, o projeto utiliza uma estratégia de duas camadas via **GitHub Actions**:
+### 🤖 Automação de Sincronização (Cloud Sync)
+Otimizado para **GitHub Actions** ou execução local, utiliza uma estratégia de duas camadas:
 
-- **Sincronização Rápida (Fast Sync)**:
+1.  **Sincronização Rápida (Fast Sync)**:
     - **Frequência**: A cada 4 horas.
-    - **Dados**: Apenas indicadores de alta variação: `valorStock`, `priceChange_1d` e `marketCap`.
-    - **Objetivo**: Manter o preço e variação diária sempre atualizados.
-- **Sincronização Completa (Full Sync)**:
-    - **Frequência**: Semanal (Domingos às 00:00 UTC).
-    - **Dados**: Todos os indicadores financeiros (ROE, ROA, Dividendos, P/E, EBITDA, etc.).
-    - **Objetivo**: Atualizar métricas fundamentais que mudam com menos frequência.
-
-#### 📊 Detalhes Técnicos da Coleção `acoesDividendos`
-A cada execução do `cron_scraper.py`, os seguintes campos são sincronizados no Firestore conforme o modo selecionado (`--mode fast` ou `--mode full`):
-
-| Campo | Descrição |
-| :--- | :--- |
-| `valorStock` | Preço atual da ação |
-| `priceChange_1d` | Variação percentual diária |
-| `priceChange_1w` | Variação percentual semanal (7 dias) |
-| `priceChange_1y` | Variação percentual anual (1 ano) |
-| `yield` | Dividend Yield (decimal, ex: 0.05 para 5%) |
-| `dividendValue` | Valor absoluto do dividendo |
-| `dividend_est` | Estimativa de dividendo futuro |
-| `dividend_ex_date` | Data ex-dividendo |
-| `dividend_gr_3_5y` | Crescimento de dividendos (3-5 anos) |
-| `pe` | Rácio Price-to-Earnings (P/E) |
-| `roa` | Return on Assets (decimal) |
-| `roe` | Return on Equity (decimal) |
-| `roi` | Return on Investment (ROIC equivalente, decimal) |
-| `marketCap` | Capitalização de mercado total |
-| `ebitda` | EBITDA da empresa |
-| `ev_ebitda` | Enterprise Value / EBITDA |
-| `enterprise_value` | Valor da Empresa (Enterprise Value) |
-| `eps_next_q` | EPS estimado para o próximo trimestre |
-| `eps_next_y` | EPS estimado para o próximo ano |
-| `eps_this_y` | EPS estimado para este ano |
-| `p_b` | Price to Book (P/B) |
-| `perf_half_y` | Performance semestral |
-| `perf_quarter` | Performance trimestral |
-| `sma200` | Simple Moving Average (200 dias) |
-| `sma50` | Simple Moving Average (50 dias) |
-| `target_price` | Preço-alvo (Target Price) |
-| `volatility` | Volatilidade |
-| `nome` | Nome oficial da empresa |
-| `source_used` | Fonte utilizada (ex: `yahoo`, `euronext`) |
-| `ultimaAtu` | Timestamp da última atualização (Firestore Server Time) |
+    - **Métricas**: Preço atual (`valorStock`), variação diária (`priceChange_1d`) e Capitalização.
+2.  **Sincronização Completa (Full Sync)**:
+    - **Frequência**: Diária ou Semanal.
+    - **Métricas**: Todos os +30 indicadores financeiros (ROE, ROA, RSI, P/E, EV/EBITDA, etc.).
 
 ---
 
-## 🛠️ Configuração Inicial
+## 📊 Estrutura de Dados (`acoesDividendos`)
 
-Siga estes passos para preparar o ambiente em qualquer PC.
+Cada ticker sincronizado no Firestore contém os seguintes campos normalizados:
 
-### 1. Pré-requisitos
+| Categoria | Campos |
+| :--- | :--- |
+| **Preço & Performance** | `valorStock`, `priceChange_1d`, `priceChange_1w`, `priceChange_1m`, `priceChange_1y`, `perf_half_y`, `perf_quarter`, `target_price`, `volatility` |
+| **Fundamentais** | `pe` (P/E Ratio), `pb` (P/B), `ebitda`, `ev_ebitda`, `enterprise_value`, `marketCap`, `eps_next_q`, `eps_next_y`, `eps_this_y` |
+| **Dividendos** | `yield`, `dividendValue`, `dividend_est`, `dividend_ex_date`, `dividend_gr_3_5y` |
+| **Rentabilidade** | `roe` (Return on Equity), `roa` (Return on Assets), `roic` (Return on Invested Capital), `roi` |
+| **Análise Técnica** | `rsi` (Relative Strength Index - 14p), `sma50`, `sma200` |
+| **Metadados** | `nome`, `ticker`, `mercado`, `source_used`, `ultimaAtu` |
 
-- **Python 3.10+** instalado.
-- **Git** (opcional, para clonar o repositório).
+---
 
-### 2. Instalação e Ambiente Virtual
+## 🛠️ Guia de Execução
 
-No terminal (PowerShell ou CMD), execute:
+### Comandos Úteis
 
+| Objetivo | Comando | Tempo Estimado |
+| :--- | :--- | :--- |
+| **Atualização Rápida** | `python cron_scraper.py --mode fast` | ~3 a 5 min (100 tickers) |
+| **Atualização Completa** | `python cron_scraper.py --mode full` | **~20 a 35 min** (100 tickers)* |
+
+*\*O tempo varia conforme o "Rate Limit" das fontes. O sistema inclui delays de segurança para evitar bloqueios.*
+
+### Configuração de Tickers por Mercado
+O sistema reconhece automaticamente os mercados:
+- `ELI:BCP` ou `BCP.LS` → **Portugal** (Euronext Lisbon)
+- `AAPL` ou `MSFT` → **US** (Nasdaq/NYSE)
+- `EPA:CS` ou `CS.PA` → **França** (Euronext Paris)
+- `VUAA.DE` → **Alemanha** (XETRA)
+
+---
+
+## ⚙️ Instalação e Configuração
+
+### 1. Ambiente Virtual e Dependências
 ```powershell
-# Criar ambiente virtual
 python -m venv .venv
-
-# Ativar ambiente virtual
 .\.venv\Scripts\activate
-
-# Instalar dependências
 pip install -r requirements.txt
 ```
 
-### 3. Configuração do Ficheiro .env
-
-Crie um ficheiro chamado `.env` na raiz do projeto (ou edite o existente) com o seguinte conteúdo:
-
+### 2. Configuração do `.env`
+Crie um ficheiro `.env` na raiz:
 ```env
-G_SHEETS_WEBHOOK_URL=SEU_URL_DO_APPS_SCRIPT
-FIREBASE_SERVICE_ACCOUNT_JSON=C:\CAMINHO\PARA\O\SEU\FICHEIRO_FIREBASE.json
+G_SHEETS_WEBHOOK_URL=https://script.google.com/... (Opcional)
+FIREBASE_SERVICE_ACCOUNT_JSON=C:\caminho\para\seu-firebase-key.json
 ```
 
-### 4. Abrir a Aplicação
-
+### 3. Interface Web
+Para gestão manual e visualização:
 ```powershell
 python app.py
 ```
-
 Aceda a: **http://127.0.0.1:5000**
 
 ---
 
-## 📊 Configuração de Integrações
-
-### Google Sheets (Opcional)
-
-Para exportar dados diretamente para uma folha de cálculo:
-
-1. Na sua Google Sheet: **Extensões** -> **Apps Script**.
-2. Copie o conteúdo de `docs/googlesheet_webhook.gs` para o editor.
-3. **Implementar** -> **Nova implementação** -> Escolha **Aplicação Web**.
-4. Configuração: Executar como **Eu**, Acesso: **Qualquer pessoa**.
-5. Copie o URL gerado e coloque-o no seu `.env` em `G_SHEETS_WEBHOOK_URL`.
-
-### Firebase (Opcional)
-
-Para sincronizar dados com a cloud:
-
-1. Aceda à [Consola do Firebase](https://console.firebase.google.com/).
-2. Crie um projeto e adicione uma base de dados **Firestore**.
-3. Vá a **Definições do Projeto** -> **Contas de Serviço**.
-4. Clique em **Gerar nova chave privada** para descarregar o ficheiro JSON.
-5. Guarde o JSON numa pasta segura e coloque o caminho completo no seu `.env` em `FIREBASE_SERVICE_ACCOUNT_JSON`.
-6. **Para Automação (GitHub Actions)**: Copie o conteúdo deste ficheiro JSON e adicione-o como um **Secret** no GitHub (Settings -> Secrets and variables -> Actions) com o nome `FIREBASE_SERVICE_ACCOUNT`.
+## 📄 Notas Técnicas
+- **Rate Limiting**: O Yahoo Finance pode bloquear o acesso se houver pedidos excessivos. O script possui lógica de retry e fallback automático para o Google Finance (via Euronext ELI).
+- **RSI**: Calculado logicamente a partir do histórico de 30 dias para garantir precisão técnica.
+- **Estrutura**: Ficheiros temporários de scraping são armazenados em `data/raw/` para auditoria.
 
 ---
-
-## 🚀 Novo Fluxo de Uso (Scraping Inteligente)\n\n1. **Introduz apenas o ticker** (ações, ETFs, cripto):\n   - Ações PT: `EDP` → Auto PT stock (Euronext + Yahoo)\n   - Ações US: `AAPL` → Auto US stock (Finviz + Yahoo + Google)\n   - ETFs: `VUAA.DE` → Auto ETF EU (JustETF + Yahoo)\n   - Cripto: `BTC-USD` → Auto Global crypto (Yahoo)\n2. **Clique \"Scraping Inteligente\"** → Sistema faz tudo automaticamente.\n3. **Resultados consolidados** multi-fonte numa tabela unificada.\n4. **Exporta** JSON/Sheets/Cloud como antes.\n\n**Exemplos**:\n```\nAAPL          → US Stock Multi-Fonte\nEDP           → PT Stock (Euronext)\nPETR4         → BR Stock (Yahoo)\nBTC-USD       → Crypto (Yahoo)\nVUAA.LS       → ETF PT/EU (JustETF)\n```\n\n### Modo Manual (Legacy)\nAdiciona `source=finviz&market=US` aos endpoints para uso avançado.
-
----
-
-## 📄 Notas & Licença
-
-- **Delays**: A app aplica um delay de 1.5s entre tickers para evitar bloqueios.
-- **Estrutura**: Os ficheiros raw ficam em `data/raw/`.
-- **Licença**: MIT.
+*MIT License © 2026*

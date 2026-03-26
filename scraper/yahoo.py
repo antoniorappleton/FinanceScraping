@@ -96,25 +96,50 @@ class YahooFinanceScraper(BaseScraper):
                     change_pct = ((current_price - past_close) / past_close) * 100
                     changes[f'priceChange_{interval}'] = round(change_pct, 2)
             
+            # --- Technical Indicators: RSI ---
+            rsi = None
+            try:
+                if len(hist) >= 15:
+                    delta = hist['Close'].diff()
+                    gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+                    loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+                    rs = gain / loss
+                    rsi_series = 100 - (100 / (1 + rs))
+                    rsi = round(rsi_series.iloc[-1], 2)
+            except:
+                pass
+
             # Fallback if no info fields
             ticker_used = normalized_ticker
             company_name = info.get('longName') or info.get('shortName') or normalized_ticker
+            
+            # Map common metrics with fallbacks
+            pe = info.get('trailingPE') or info.get('forwardPE')
+            ev_ebitda = info.get('enterpriseToEbitda')
+            dividend_yield = info.get('dividendYield') or info.get('trailingAnnualDividendYield')
             
             data = {
                 'yf_success': True,
                 'valorStock': float(current_price),
                 **changes,
                 'marketCap': info.get('marketCap'),
-                'pe': info.get('trailingPE') or info.get('forwardPE'),
-                'yield': info.get('dividendYield'),
+                'pe': pe,
+                'ev_ebitda': ev_ebitda,
+                'yield': dividend_yield,
+                'rsi': rsi,
                 'company': company_name,
-                'ticker': ticker_used
+                'ticker': ticker_used,
+                'roe': info.get('returnOnEquity'),
+                'roa': info.get('returnOnAssets'),
+                'roic': info.get('returnOnCapital') # Some tickets have this
             }
             
             # Add all info keys cleaned
             for k, v in info.items():
                 if isinstance(v, (int, float)):
-                    data[f'info_{k.lower().replace(" ", "_")}'] = v
+                    # Normalize common names for transformer
+                    key = k.lower().replace(" ", "_")
+                    data[f'info_{key}'] = v
             
             return data
             
@@ -154,8 +179,20 @@ class YahooFinanceScraper(BaseScraper):
 
     def scrape_quote(self, ticker: str, market: str) -> Dict[str, Any]:
         """Try yfinance first (robust), fallback to HTML scrape."""
+        # Normalize specifically for Yahoo
+        norm_ticker = ticker.strip().upper()
+        if ":" in norm_ticker:
+            # Handle ELI:BCP -> BCP.LS, EPA:CS -> CS.PA, etc.
+            parts = norm_ticker.split(":")
+            if parts[0] == "ELI":
+                norm_ticker = f"{parts[1]}.LS"
+            elif parts[0] == "EPA":
+                norm_ticker = f"{parts[1]}.PA"
+            elif parts[0] == "FRA":
+                norm_ticker = f"{parts[1]}.DE"
+                
         # Primary: yfinance
-        yf_data = self._get_yfinance_data(ticker, market)
+        yf_data = self._get_yfinance_data(norm_ticker, market)
         if yf_data:
             return {
                 "source": self.source_name,
@@ -173,9 +210,10 @@ class YahooFinanceScraper(BaseScraper):
         
         # Fallback: HTML scrape (existing logic)
         normalized_ticker = BaseScraper.normalize_ticker(ticker, market)
-        orig_ticker = ticker.strip().upper()
+        ticker_to_try = norm_ticker if ":" not in norm_ticker else normalized_ticker
+        
         try:
-            html = self._get_html(orig_ticker)
+            html = self._get_html(ticker_to_try)
             soup = BeautifulSoup(html, "lxml")
             summary = self._parse_summary(soup)
             if summary.get("metrics"):
