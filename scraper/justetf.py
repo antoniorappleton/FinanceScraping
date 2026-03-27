@@ -35,6 +35,11 @@ TICKER_ISIN_MAP: Dict[str, str] = {
     "JEDI": "IE00BFNM3P36",   # JPMorgan Global Equity
     "VVMX": "IE00BKX55S42",   # Vanguard FTSE All-World
     "VZLC": "IE00B3RBWM25",   # Vanguard FTSE All-World High Div
+    # FT Nasdaq Smart Grid
+    "GRID":     "IE000J80JTL1",
+    "GRID:GER": "IE000J80JTL1",
+    "GRID:FRA": "IE000J80JTL1",
+    "GRID:IE":  "IE000J80JTL1",
 }
 
 

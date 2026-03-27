@@ -11,7 +11,7 @@ DETECT_PATTERNS = {
 
 # Expanded from user list and tests
 KNOWN_EU_ETFS = {
-    'G2X', 'QDVE', 'XDWF', 'QDVK', 'IU5C', '2B7D', 'VUSA', 'VUAA', 'VUSD', 'DAVV', 'QDVF', 'IUIT', 'IYM'
+    'G2X', 'QDVE', 'XDWF', 'QDVK', 'IU5C', '2B7D', 'VUSA', 'VUAA', 'VUSD', 'DAVV', 'QDVF', 'IUIT', 'IYM', 'GRID'
 }
 KNOWN_US_ETFS = {
     'QQQ', 'IXC', 'VGK', 'OIH', 'EUNK', 'XDWF', 'QDVF', 'IUIT', 'IYM'
@@ -19,7 +19,7 @@ KNOWN_US_ETFS = {
 
 MARKET_MAP = {
     'FRA': 'EU', 'PA': 'EU', 'DE': 'EU', 'LON': 'UK', 'LSE': 'UK', 'ELI': 'PT', 'BIT': 'IT', 'ETR': 'EU',
-    'EPA': 'EU', 'XETR': 'EU', 'GER': 'EU'
+    'EPA': 'EU', 'XETR': 'EU', 'GER': 'EU', 'IE': 'EU'
 }
 
 def parse_ticker_market(ticker: str) -> Tuple[str, str]:
@@ -71,12 +71,12 @@ def select_sources(asset_type: str, market: str) -> List[str]:
     rules = {
         ('stock', 'US'): ['finviz', 'yahoo', 'google_finance'],
         ('stock', 'PT'): ['euronext', 'yahoo', 'google_finance'],
-        ('stock', 'EU'): ['euronext', 'yahoo', 'justetf'],
+        ('stock', 'EU'): ['euronext', 'yahoo', 'ft_markets', 'justetf'],
         ('stock', 'BR'): ['yahoo', 'google_finance'],
-        ('stock', 'UK'): ['yahoo', 'euronext', 'justetf'],
-        ('etf', 'EU'): ['justetf', 'euronext', 'yahoo', 'google_finance'],
-        ('etf', 'US'): ['finviz', 'justetf', 'yahoo'],
-        ('etf', 'GLOBAL'): ['justetf', 'yahoo'],
+        ('stock', 'UK'): ['yahoo', 'euronext', 'ft_markets', 'justetf'],
+        ('etf', 'EU'): ['justetf', 'ft_markets', 'euronext', 'yahoo', 'google_finance'],
+        ('etf', 'US'): ['finviz', 'justetf', 'yahoo', 'ft_markets'],
+        ('etf', 'GLOBAL'): ['justetf', 'ft_markets', 'yahoo'],
         ('crypto', 'GLOBAL'): ['yahoo', 'google_finance'],
     }
     key = (asset_type, market)

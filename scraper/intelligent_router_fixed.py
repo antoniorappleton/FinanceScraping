@@ -32,7 +32,7 @@ def detect_asset_type_and_market(ticker: str) -> Tuple[str, str]:
             break
     
     # ETF heuristic: Add known UCITS ETFs like VUSA, improve detection
-    KNOWN_EU_ETFS = {'G2X', 'QDVE', 'XDWF', 'QDVK', 'IU5C', '2B7D', 'VUSA', 'VUAA', 'VUSD'}
+    KNOWN_EU_ETFS = {'G2X', 'QDVE', 'XDWF', 'QDVK', 'IU5C', '2B7D', 'VUSA', 'VUAA', 'VUSD', 'GRID'}
     if ticker_upper in KNOWN_EU_ETFS:
         return 'etf', 'EU'
     if re.search(r'^(VU|IWDA|AGG)', ticker_upper):

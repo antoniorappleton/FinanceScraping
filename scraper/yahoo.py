@@ -188,8 +188,10 @@ class YahooFinanceScraper(BaseScraper):
                 norm_ticker = f"{parts[1]}.LS"
             elif parts[0] == "EPA":
                 norm_ticker = f"{parts[1]}.PA"
-            elif parts[0] == "FRA":
+            elif parts[0] == "FRA" or parts[0] == "GER":
                 norm_ticker = f"{parts[1]}.DE"
+            elif parts[0] == "IE":
+                norm_ticker = f"{parts[1]}.IR"
                 
         # Primary: yfinance
         yf_data = self._get_yfinance_data(norm_ticker, market)
