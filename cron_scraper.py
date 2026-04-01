@@ -103,9 +103,14 @@ def run_automated_scrape(mode="full"):
                 market_cap_str = metrics.get("Market Cap") or metrics.get("marketCap") or metrics.get("Fund size")
 
                 # Build Payload
+                price_val = clean_float(price_str)
+                
+                # We consider success ONLY if we got a valid price (non-zero)
+                is_valid_price = price_val and price_val > 0
+                
                 if mode == "fast":
                     payload = {
-                        "valorStock": clean_float(price_str),
+                        "valorStock": price_val,
                         "priceChange_1d": clean_float(change_str),
                         "marketCap": clean_float(market_cap_str),
                         "source_used": f"{source_name} ({method_used})",
@@ -115,7 +120,7 @@ def run_automated_scrape(mode="full"):
                 else:
                     # Full Sync Indicators
                     payload = {
-                        "valorStock": clean_float(price_str),
+                        "valorStock": price_val,
                         "priceChange_1d": clean_float(change_str),
                         "priceChange_1w": clean_float(metrics.get("priceChange_1w") or metrics.get("Perf Week")),
                         "priceChange_1y": clean_float(metrics.get("priceChange_1y") or metrics.get("Perf Year")),
@@ -143,11 +148,14 @@ def run_automated_scrape(mode="full"):
                         if k not in payload:
                             payload[k] = v
                 
-                # 3. Update Firestore
-                if firebase_manager.update_market_data(ticker, payload):
-                    logger.info(f"{ticker} updated ({mode}) via {source_name}")
-                    success = True
-                    break # Success, move to next ticker
+                # 3. Update Firestore (only if price is valid OR it's the last attempt)
+                if is_valid_price:
+                    if firebase_manager.update_market_data(ticker, payload):
+                        logger.info(f"{ticker} updated ({mode}) via {source_name}")
+                        success = True
+                        break # Success, move to next ticker
+                else:
+                    logger.warning(f"Price for {ticker} from {source_name} is zero/invalid. Trying next source...")
                 
             except Exception as e:
                 logger.error(f"Error scraping {ticker} with {source_name}: {e}")

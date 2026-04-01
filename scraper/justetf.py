@@ -152,11 +152,41 @@ class JustETFScraper(BaseScraper):
         price_tag = soup.find("div", class_="realtime-quotes")
         if not price_tag:
              price_tag = soup.find("span", {"data-testid": "realtime-quotes_price-value"})
+        if not price_tag:
+             price_tag = soup.find("div", class_="etf-data-row")
+        if not price_tag:
+             # Search for text "Latest quote" and get parent
+             lq_label = soup.find(string=re.compile(r"Latest quote", re.I))
+             if lq_label:
+                 price_tag = lq_label.find_parent("div").find("span", class_="val") or lq_label.find_parent("div")
              
         if price_tag:
             # If we found the wrapper, search within it
-            val = price_tag.find("span", {"data-testid": "realtime-quotes_price-value"}) or price_tag
+            val = price_tag.find("span", {"data-testid": "realtime-quotes_price-value"}) or price_tag.find("span", class_="val") or price_tag
             metrics["valorStock"] = self._clean_text(val.get_text())
+        
+        # Fallback 5: Check meta tags or global regex in HTML
+        if not metrics.get("valorStock"):
+            meta_desc = soup.find("meta", property="og:description")
+            if meta_desc and "EUR" in meta_desc.get("content", ""):
+                 # Often contains "Price: 336.63 EUR"
+                 match = re.search(r"([\d,.]+)\s*EUR", meta_desc["content"])
+                 if match:
+                     metrics["valorStock"] = match.group(1)
+        
+        if not metrics.get("valorStock"):
+             # Last resort: search for a pattern like "336.63 EUR" in the whole text
+             match = re.search(r"(\d{2,}\.\d{2})\s*EUR", soup.get_text())
+             if match:
+                 metrics["valorStock"] = match.group(1)
+                 
+        if not metrics.get("valorStock"):
+            # Check the <title> tag (e.g. "iShares MSCI World Small Cap UCITS ETF | 336.63 | IE00B3VWMM18")
+            title_tag = soup.find("title")
+            if title_tag:
+                match = re.search(r"([\d,.]+)", title_tag.get_text())
+                if match:
+                    metrics["valorStock"] = match.group(1)
         
         # Robust extraction: multiple selectors for JustETF profile data
         # 1. h1 title already done

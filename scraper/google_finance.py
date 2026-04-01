@@ -43,15 +43,37 @@ class GoogleFinanceScraper(BaseScraper):
         # If ticker already has an exchange (TICKER:EXCHANGE), use it directly
         if ":" in ticker:
             ticker_param = ticker
+            url = f"{self.BASE_URL}/{ticker_param}"
+            response = self.session.get(url, timeout=20)
+            response.raise_for_status()
+            return response.text
         else:
-            exchange = self.EXCHANGE_MAP.get(market, "NASDAQ")
-            ticker_param = f"{ticker}:{exchange}"
+            # Try multiple exchanges in order
+            exchanges = self.EXCHANGE_MAP.get(market, "NASDAQ").split(",")
+            last_error = None
             
-        url = f"{self.BASE_URL}/{ticker_param}"
-        response = self.session.get(url, timeout=20)
-        response.raise_for_status()
-        time.sleep(self.pause_seconds)
-        return response.text
+            for ex in exchanges:
+                ticker_param = f"{ticker}:{ex}"
+                url = f"{self.BASE_URL}/{ticker_param}"
+                try:
+                    response = self.session.get(url, timeout=20)
+                    response.raise_for_status()
+                    
+                    # Verify if the page found actually has a price
+                    soup = BeautifulSoup(response.text, "lxml")
+                    price = soup.find("div", class_="YMlKec fxKbKc")
+                    if price:
+                        time.sleep(self.pause_seconds)
+                        return response.text
+                    else:
+                         continue # Try next exchange
+                except Exception as e:
+                    last_error = e
+                    continue
+            
+            if last_error:
+                raise last_error
+            raise ValueError(f"No results for {ticker} on any exchange for market {market}")
 
     def _parse_info(self, soup: BeautifulSoup) -> Dict[str, str]:
         data: Dict[str, str] = {}

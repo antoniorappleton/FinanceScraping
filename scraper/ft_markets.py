@@ -49,6 +49,14 @@ class FTMarketsScraper(BaseScraper):
             
         try:
             response = self.session.get(url, timeout=20)
+            
+            # If EU market and not found or redirected to search, try GER:EUR suffix
+            # Note: FT doesn't 302, it just renders a different page on 200 often
+            if (response.status_code != 200 or "search" in response.url.lower()) and market == "EU" and ":" not in ticker:
+                ticker_ger = f"{ticker}:GER:EUR"
+                url = f"{self.BASE_URL if is_likely_etf else self.EQUITY_URL}{ticker_ger}"
+                response = self.session.get(url, timeout=20)
+
             if response.status_code != 200 and is_likely_etf:
                 # Try equity fallback
                 url = f"{self.EQUITY_URL}{ticker}"
@@ -58,6 +66,18 @@ class FTMarketsScraper(BaseScraper):
             time.sleep(self.pause_seconds)
             
             soup = BeautifulSoup(response.text, "lxml")
+            
+            # If the page still looks like a search result (no price), try one more time
+            if not soup.find("span", class_="mod-ui-data-list__value") and \
+               not soup.find("span", class_="mod-tearsheet-overview_header_price") and \
+               market == "EU" and "GER:EUR" not in url:
+                
+                ticker_ger = f"{ticker}:GER:EUR"
+                url = f"{self.BASE_URL if is_likely_etf else self.EQUITY_URL}{ticker_ger}"
+                response = self.session.get(url, timeout=20)
+                response.raise_for_status()
+                soup = BeautifulSoup(response.text, "lxml")
+
             metrics = {}
             
             # 1. Company name
@@ -67,10 +87,15 @@ class FTMarketsScraper(BaseScraper):
             # 2. Price and basic info
             # Usually in a list or specific classes
             price_tag = soup.find("span", class_="mod-ui-data-list__value")
+            if not price_tag:
+                 # Fallback for some tear sheets
+                 price_tag = soup.find("span", class_="mod-tearsheet-overview_header_price")
+                 
             if price_tag:
                 metrics["price"] = self._clean_text(price_tag.get_text())
-                
-            # Today's Change
+            else:
+                # No price found, this source failed for this ticker
+                raise ValueError(f"No price found for {ticker} on FT Markets")
             change_tags = soup.find_all("span", class_=re.compile(r"mod-ui-data-list__value--[positive|negative]"))
             if change_tags:
                  metrics["change"] = self._clean_text(change_tags[0].get_text())
