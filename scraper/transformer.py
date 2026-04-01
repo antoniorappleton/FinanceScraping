@@ -23,6 +23,17 @@ def normalize_tickers_from_text(raw_text: str) -> List[str]:
             
     return normalized
 
+def normalize_ticker(ticker: str) -> str:
+    """
+    Remove common exchange prefixes (XETR_, BVMF_, NYSE_, NASDAQ_)
+    used in the database but not needed by the scrapers.
+    """
+    prefixes = ["XETR_", "BVMF_", "NYSE_", "NASDAQ_"]
+    for prefix in prefixes:
+        if ticker.upper().startswith(prefix):
+            return ticker[len(prefix):]
+    return ticker
+
 def flatten_scrape_result(result: Dict[str, Any]) -> Dict[str, Any]:
     """
     Convert a nested scraper result into a flat dictionary for table rows.

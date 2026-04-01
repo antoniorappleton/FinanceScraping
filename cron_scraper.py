@@ -9,7 +9,7 @@ load_dotenv()
 # Import scrapers and manager
 from scraper.registry import SCRAPER_REGISTRY
 from scraper.firebase_manager import firebase_manager
-from scraper.transformer import clean_float, clean_row_for_firestore
+from scraper.transformer import clean_float, clean_row_for_firestore, normalize_ticker
 
 # Configure logging
 logging.basicConfig(
@@ -51,22 +51,28 @@ def run_automated_scrape(mode="full"):
     logger.info(f"Found {len(ticker_data)} tickers to process.")
     
     for item in ticker_data:
-        ticker = item["ticker"]
+        ticker_id = item["ticker"]
         market_name = item["market_name"]
+        
+        # Normalize ticker for scraping (e.g. XETR_ABC -> ABC)
+        ticker = normalize_ticker(ticker_id)
+        
         # Detect market code
         market_code = "US" 
         m_name_lower = (market_name or "").lower()
         
-        if m_name_lower == "portugal" or ".ls" in ticker.lower():
+        if m_name_lower == "portugal" or ".ls" in ticker.lower() or ".ls" in ticker_id.lower():
             market_code = "PT"
-        elif any(x in m_name_lower for x in ["xetra", "euronext", "milan", "madrid", "paris", "frankfurt", "europe", "eu", "justetf", "asia", "emerging", "global"]):
+        elif "xetra" in m_name_lower or "frankfurt" in m_name_lower or ticker_id.startswith("XETR_"):
             market_code = "EU"
-        elif any(x in m_name_lower for x in ["brasil", "brazil", "b3", "bvmf"]) or ".sa" in ticker.lower():
+        elif any(x in m_name_lower for x in ["euronext", "milan", "madrid", "paris", "europe", "eu", "justetf", "asia", "emerging", "global"]):
+            market_code = "EU"
+        elif any(x in m_name_lower for x in ["brasil", "brazil", "b3", "bvmf"]) or ".sa" in ticker.lower() or ticker_id.startswith("BVMF_"):
             market_code = "BR"
         elif "." in ticker:
             # Fallback for other dotted tickers
             market_code = "PT" if ticker.endswith(".LS") else "US"
-            
+        
         success = False
         
         # Determine sources to try based on market
@@ -148,10 +154,10 @@ def run_automated_scrape(mode="full"):
                         if k not in payload:
                             payload[k] = v
                 
-                # 3. Update Firestore (only if price is valid OR it's the last attempt)
+                # 3. Update Firestore (only if price is valid)
                 if is_valid_price:
-                    if firebase_manager.update_market_data(ticker, payload):
-                        logger.info(f"{ticker} updated ({mode}) via {source_name}")
+                    if firebase_manager.update_market_data(ticker_id, payload):
+                        logger.info(f"{ticker_id} updated ({mode}) via {source_name} (using {ticker})")
                         success = True
                         break # Success, move to next ticker
                 else:
@@ -165,7 +171,7 @@ def run_automated_scrape(mode="full"):
                 continue 
         
         if not success:
-            logger.error(f"Failed to update {ticker} after trying all sources.")
+            logger.error(f"Failed to update {ticker_id} after trying all sources.")
         
         time.sleep(2)
 
