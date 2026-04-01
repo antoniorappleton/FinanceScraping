@@ -55,16 +55,29 @@ def run_automated_scrape(mode="full"):
         market_name = item["market_name"]
         # Detect market code
         market_code = "US" 
-        if market_name == "Portugal" or "." in ticker:
+        m_name_lower = (market_name or "").lower()
+        
+        if m_name_lower == "portugal" or ".ls" in ticker.lower():
             market_code = "PT"
+        elif any(x in m_name_lower for x in ["xetra", "euronext", "milan", "madrid", "paris", "frankfurt", "europe", "eu", "justetf", "asia", "emerging", "global"]):
+            market_code = "EU"
+        elif any(x in m_name_lower for x in ["brasil", "brazil", "b3", "bvmf"]) or ".sa" in ticker.lower():
+            market_code = "BR"
+        elif "." in ticker:
+            # Fallback for other dotted tickers
+            market_code = "PT" if ticker.endswith(".LS") else "US"
             
         success = False
-        # Try multiple scrapers in order
-        sources_to_try = ["yahoo", "google_finance", "finviz"]
         
-        # Avoid Finviz for PT/EU stocks to prevent US ticker data pollution
-        if market_code != "US":
-            sources_to_try = ["yahoo", "google_finance"]
+        # Determine sources to try based on market
+        if market_code == "EU":
+            sources_to_try = ["ft_markets", "justetf", "yahoo", "google_finance"]
+        elif market_code == "PT":
+            sources_to_try = ["yahoo", "google_finance", "ft_markets"]
+        elif market_code == "BR":
+            sources_to_try = ["yahoo"]
+        else: # US or Global
+            sources_to_try = ["yahoo", "ft_markets", "google_finance", "finviz"]
 
         for source_name in sources_to_try:
             if source_name not in SCRAPER_REGISTRY:
@@ -77,9 +90,17 @@ def run_automated_scrape(mode="full"):
                 method_used = result.get("method", "scrape")
                 
                 # Universal extraction attempt
-                price_str = metrics.get("valorStock") or result.get("title", {}).get("price") or metrics.get("price")
-                change_str = metrics.get("change_pct") or metrics.get("Change")
-                market_cap_str = metrics.get("Market Cap") or metrics.get("marketCap")
+                price_str = (
+                    metrics.get("valorStock") or 
+                    result.get("title", {}).get("price") or 
+                    metrics.get("price") or 
+                    metrics.get("Latest quote") or 
+                    metrics.get("NAV") or
+                    metrics.get("Quote")
+                )
+                
+                change_str = metrics.get("change_pct") or metrics.get("Change") or metrics.get("Change (pct)")
+                market_cap_str = metrics.get("Market Cap") or metrics.get("marketCap") or metrics.get("Fund size")
 
                 # Build Payload
                 if mode == "fast":

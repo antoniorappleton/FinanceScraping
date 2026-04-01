@@ -40,6 +40,9 @@ TICKER_ISIN_MAP: Dict[str, str] = {
     "GRID:GER": "IE000J80JTL1",
     "GRID:FRA": "IE000J80JTL1",
     "GRID:IE":  "IE000J80JTL1",
+    # Added
+    "EXSA": "DE0002635307",   # iShares STOXX Europe 600
+    "EUNN": "IE00B3VWMM18",   # iShares MSCI World Small Cap
 }
 
 
@@ -144,6 +147,16 @@ class JustETFScraper(BaseScraper):
         # Fund name
         title_tag = soup.find("h1")
         company = self._clean_text(title_tag.get_text()) if title_tag else ticker
+        
+        # Price extraction (specific data-testid found via browser)
+        price_tag = soup.find("div", class_="realtime-quotes")
+        if not price_tag:
+             price_tag = soup.find("span", {"data-testid": "realtime-quotes_price-value"})
+             
+        if price_tag:
+            # If we found the wrapper, search within it
+            val = price_tag.find("span", {"data-testid": "realtime-quotes_price-value"}) or price_tag
+            metrics["valorStock"] = self._clean_text(val.get_text())
         
         # Robust extraction: multiple selectors for JustETF profile data
         # 1. h1 title already done
