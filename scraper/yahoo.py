@@ -131,7 +131,9 @@ class YahooFinanceScraper(BaseScraper):
                 'ticker': ticker_used,
                 'roe': info.get('returnOnEquity'),
                 'roa': info.get('returnOnAssets'),
-                'roic': info.get('returnOnCapital') # Some tickets have this
+                'roic': info.get('returnOnCapital'), # Some tickets have this
+                'sma50': info.get('fiftyDayAverage'),
+                'sma200': info.get('twoHundredDayAverage'),
             }
             
             # Add all info keys cleaned

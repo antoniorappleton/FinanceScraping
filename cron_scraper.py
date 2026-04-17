@@ -249,6 +249,8 @@ def run_automated_scrape(mode="full"):
                         "ev_ebitda": clean_float(metrics.get("ev_ebitda") or metrics.get("EV/EBITDA")),
                         "marketCap": clean_float(market_cap_str),
                         "ebitda": clean_float(metrics.get("ebitda") or metrics.get("EBITDA")),
+                        "sma50": clean_float(metrics.get("sma50") or metrics.get("SMA50")),
+                        "sma200": clean_float(metrics.get("sma200") or metrics.get("SMA200")),
                         "source_used": f"{source_name} ({method_used})",
                         "method_used": method_used,
                         "nome": result.get("title", {}).get("company", ticker),

@@ -147,6 +147,19 @@ class FinvizScraper(BaseScraper):
                 "O ticker pode não existir ou HTML mudou. Tente outro formato."
             )
 
+        # Normalize SMAs to absolute values if they are % (Finviz specific)
+        from scraper.transformer import clean_float
+        price_val = clean_float(metrics.get("Price"))
+        if price_val > 0:
+            for sma_key in ["SMA50", "SMA200"]:
+                val_str = metrics.get(sma_key)
+                if val_str and "%" in val_str:
+                    pct_dist = clean_float(val_str)
+                    # price = sma * (1 + dist) => sma = price / (1 + dist)
+                    absolute_sma = price_val / (1 + pct_dist)
+                    metrics[f"{sma_key}_abs"] = round(absolute_sma, 2)
+                    metrics[sma_key] = round(absolute_sma, 2) # Overwrite to harmonize
+
         return {
             "source": self.source_name,
             "market": market,
