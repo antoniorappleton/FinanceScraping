@@ -108,11 +108,16 @@ scrapy.cfg
 ehthumbs.db
 Thumbs.db
 
-# Data directories
+# Data directories & local outputs
 data/raw/
 data/processed/
 logs/
-*.json  # raw data files, but allow requirements.txt etc.
+tmp/
+local_run_test.txt
+final_results_output.txt
+
+# Raw data files (batch scrapes, debug outputs)
+*.json
 
 # Firebase credentials
 *-firebase-adminsdk-*.json
