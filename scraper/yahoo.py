@@ -40,7 +40,7 @@ class YahooFinanceScraper(BaseScraper):
         time.sleep(self.pause_seconds)
         return response.text
 
-    def _parse_summary(self, soup: BeautifulSoup) -> Dict[str, str]:
+    def _parse_summary(self, soup: BeautifulSoup, ticker: str = "") -> Dict[str, str]:
         data: Dict[str, str] = {}
         
         # Main quote header
@@ -167,7 +167,7 @@ class YahooFinanceScraper(BaseScraper):
             try:
                 html = self._get_html(normalized)
                 soup = BeautifulSoup(html, "lxml")
-                summary = self._parse_summary(soup)
+                summary = self._parse_summary(soup, normalized)
                 if summary.get("company"):
                     results.append({
                         "ticker": normalized,
@@ -219,7 +219,7 @@ class YahooFinanceScraper(BaseScraper):
         try:
             html = self._get_html(ticker_to_try)
             soup = BeautifulSoup(html, "lxml")
-            summary = self._parse_summary(soup)
+            summary = self._parse_summary(soup, ticker_to_try)
             if summary.get("metrics"):
                 ticker_used = ticker_to_try
             else:
@@ -227,7 +227,7 @@ class YahooFinanceScraper(BaseScraper):
         except:
             html = self._get_html(normalized_ticker)
             soup = BeautifulSoup(html, "lxml")
-            summary = self._parse_summary(soup)
+            summary = self._parse_summary(soup, normalized_ticker)
             if not summary.get("metrics"):
                 raise ValueError("No data found for ticker in Yahoo Finance")
             ticker_used = normalized_ticker
