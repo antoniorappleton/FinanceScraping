@@ -137,10 +137,41 @@ class FirebaseManager:
             
             self.db.collection("acoesDividendos").document(ticker).set(data, merge=True)
             print(f"Firebase: acoesDividendos atualizado para {ticker}")
+            
+            # Propagar para a coleção 'ativos' (portfólio)
+            self._propagate_to_portfolio(ticker, data)
+            
             return True
         except Exception as e:
             print(f"Firebase: Erro ao atualizar marketData para {ticker}: {e}")
             return False
+
+    def _propagate_to_portfolio(self, ticker, data):
+        """
+        Atualiza campos relevantes (preço, SMAs) em todos os documentos 
+        da coleção 'ativos' que correspondam ao ticker.
+        """
+        if not self.db:
+            return
+
+        try:
+            # Selecionar apenas campos que fazem sentido no portfólio
+            fields_to_sync = ["valorStock", "sma50", "sma200", "priceChange_1d"]
+            sync_payload = {k: data[k] for k in fields_to_sync if k in data}
+            
+            if not sync_payload:
+                return
+
+            # Procurar documentos com este ticker na coleção 'ativos'
+            ativos_ref = self.db.collection("ativos")
+            query = ativos_ref.where("ticker", "==", ticker).stream()
+            
+            for doc in query:
+                doc.reference.update(sync_payload)
+                # print(f"Firebase: Portfólio (ativos) atualizado para {ticker} (doc {doc.id})")
+                
+        except Exception as e:
+            print(f"Firebase: Erro ao propagar para portfólio para {ticker}: {e}")
 
 # Instância única para reutilização
 firebase_manager = FirebaseManager()
