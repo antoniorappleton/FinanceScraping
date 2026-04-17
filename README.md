@@ -1,80 +1,83 @@
 # FinanceScraping 📈
 
-Automated scraping pipeline for global ticker data (Stocks & ETFs), with a focus on European markets. The system synchronizes real-time financial metrics directly to Firestore.
+Pipeline de scraping automatizado para dados de ativos globais (Ações & ETFs), com foco nos mercados europeus. O sistema sincroniza métricas financeiras em tempo real diretamente para o Firestore.
 
-## 🚀 Features
-- **Multi-Source Scraping**: Reliable data extraction from Yahoo Finance, FT Markets, JustETF, Google Finance, and Finviz.
-- **Smart Fallback System**: Automatically switches providers if one fails or returns invalid data.
-- **European Asset Focus**: Specialized logic for Euronext, XETRA, and Portuguese markets.
-- **Intelligent Bootstrap Logic**: Automatically detects tickers with missing or invalid prices (`#N/A`) and force-updates them before following regular sync schedules.
-- **Dynamic Frequency**: High-frequency price updates vs. weekly full financial health checks.
+## 🚀 Funcionalidades
+- **Scraping Multi-Fonte**: Extração de dados confiável do Yahoo Finance, FT Markets, JustETF, Google Finance e Finviz.
+- **Sistema Inteligente de Fallback**: Alterna automaticamente entre fornecedores se um falhar ou retornar dados inválidos.
+- **Foco em Ativos Europeus**: Lógica especializada para Euronext, XETRA e mercado português.
+- **Lógica de Bootstrap Inteligente**: Deteta automaticamente tickers com preços em falta ou inválidos (`#N/A`) e força a atualização imediata antes de seguir os ciclos normais.
+- **Frequência Dinâmica**: Atualizações de preço de alta frequência vs. verificações semanais completas de saúde financeira.
 
-## ⚙️ Automation & Scheduling
+## ⚙️ Automação & Agendamento
 
-The project includes a robust local scheduler (`local_scheduler.py`) designed to maintain the database updated without manual intervention:
+O projeto inclui um agendador local robusco (`local_scheduler.py`) desenhado para manter a base de dados atualizada sem intervenção manual:
 
-| Mode | Frequency | Scope |
+| Modo | Frequência | Âmbito |
 | :--- | :--- | :--- |
-| **Priority Bootstrap** | Every Run | Tickers with `#N/A` or missing `valorStock` get price updates immediately. |
-| **Fast Sync** | Every 4 Hours* | Updates `valorStock`, `priceChange_1d`, and `marketCap`. |
-| **Full Sync** | Weekly (Sundays) | Updates all indicators (P/E, ROE, RSI, Yield, Performance 1m/1y, etc.). |
+| **Priority Bootstrap** | Cada Execução | Tickers com `#N/A` ou sem `valorStock` são atualizados imediatamente. |
+| **Fast Sync** | A cada 4 Horas* | Atualiza `valorStock`, `priceChange_1d` e `marketCap`. |
+| **Full Sync** | Semanal (Domingos) | Atualiza todos os indicadores (P/E, ROE, RSI, Yield, Performance 1m/1y, etc.). |
 
-*\*Default interval, configurable via command line.*
+*\*Intervalo padrão, configurável via linha de comando.*
 
-## 🛠️ Setup
+## 🛠️ Configuração
 
-### Prerequisites
+### Pré-requisitos
 - Python 3.8+
-- [Firebase project](https://console.firebase.google.com/) with a Service Account JSON.
+- [Projeto Firebase](https://console.firebase.google.com/) com um JSON de Service Account.
 
-### Installation
-1. Clone the repository.
-2. Create and activate a virtual environment:
+### Instalação
+1. Clone o repositório.
+2. Crie e ative um ambiente virtual:
    ```bash
    python -m venv .venv
-   source .venv/bin/activate  # Windows: .venv\Scripts\activate
+   # Windows:
+   .venv\Scripts\activate
+   # Linux/Mac:
+   source .venv/bin/activate
    ```
-3. Install dependencies:
+3. Instale as dependências:
    ```bash
    pip install -r requirements.txt
    ```
-4. Configure `.env`:
+4. Configure o ficheiro `.env`:
    ```env
-   FIREBASE_SERVICE_ACCOUNT_JSON=C:\path\to\your\firebase-key.json
+   FIREBASE_SERVICE_ACCOUNT_JSON=C:\caminho\para\o\seu\firebase-key.json
    ```
 
-## 📖 Usage
+## 📖 Utilização
 
-### Automated Execution (Recommended)
-Run the local scheduler in the background. It will manage the frequencies and modes automatically.
+### Execução Automatizada (Recomendado)
+Execute o agendador local em background. Ele fará a gestão automática das frequências e modos.
 ```bash
 python local_scheduler.py --interval-4h
 ```
 
-### Manual Execution
-You can manually trigger specific sync modes using `cron_scraper.py`:
+### Execução Manual
+Pode disparar manualmente modos de sincronização específicos usando o `cron_scraper.py`:
 ```bash
-# Update only price and basic info for all tickers
+# Atualizar apenas o preço e info básica para todos os tickers
 python cron_scraper.py --mode fast
 
-# Update all financial metrics (intended for weekly runs)
+# Atualizar todas as métricas financeiras (ideal para execuções semanais)
 python cron_scraper.py --mode full
 ```
 
-## 📂 Project Structure
-- `local_scheduler.py`: Background service that orchestrates sync timing.
-- `cron_scraper.py`: Core logic for fetching ticker data and updating Firestore.
-- `scraper/`: Specialized modules for each data provider (Yahoo, FT, etc.).
-- `tools/`: Utility scripts for database maintenance and diagnostic checks.
-- `app.py`: (Optional) Web interface for portfolio analysis and visualization.
+## 📂 Estrutura do Projeto
+- `local_scheduler.py`: Serviço de background que orquestra o timing das sincronizações.
+- `cron_scraper.py`: Lógica central de recolha de dados e atualização do Firestore.
+- `scraper/`: Módulos especializados para cada fornecedor (Yahoo, FT, etc.).
+- `tools/`: Scripts utilitários para manutenção da base de dados e diagnósticos.
+- `app.py`: (Opcional) Interface web para análise de portfólio e visualização.
 
-## 📝 Data Model & Ticker Management
-The system reads from the `acoesDividendos` collection in Firestore.
+## 📝 Modelo de Dados & Gestão de Tickers
+O sistema lê a partir da coleção `acoesDividendos` no Firestore.
 
-**To add a new ticker:**
-1. Create a document with the Ticker as ID (e.g. `AAPL` or `XETR_VVMX`).
-2. Set `mercado` field (e.g., `Portugal`, `US`, `Xetra`).
-3. (Optional) Set `valorStock` to `#N/A` if you want the scraper to prioritize it immediately.
+**Para adicionar um novo ticker:**
+1. Crie um documento com o Ticker como ID (ex: `AAPL` ou `XETR_VVMX`).
+2. Defina o campo `mercado` (ex: `Portugal`, `US`, `Xetra`).
+3. (Opcional) Defina o `valorStock` como `#N/A` se quiser que o scraper o priorize imediatamente.
 
-**To trigger an immediate full update for a ticker:**
-The scheduler handles this based on the `lastFullSync` timestamp, but you can always run `--mode full` manually.
+**Para forçar uma atualização completa de um ticker:**
+O agendador gere isto com base no timestamp `lastFullSync`, mas pode sempre correr `--mode full` manualmente.
