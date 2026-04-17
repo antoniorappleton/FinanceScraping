@@ -102,11 +102,16 @@ def run_automated_scrape(mode="full"):
                     metrics.get("price") or 
                     metrics.get("Latest quote") or 
                     metrics.get("NAV") or
-                    metrics.get("Quote")
+                    metrics.get("Quote") or
+                    metrics.get("Price")
                 )
                 
                 change_str = metrics.get("change_pct") or metrics.get("Change") or metrics.get("Change (pct)")
                 market_cap_str = metrics.get("Market Cap") or metrics.get("marketCap") or metrics.get("Fund size")
+                
+                # Warn if no price found
+                if not price_str:
+                    logger.warning(f"Could not parse valid valorStock for {ticker} using {source_name}. (Raw: {price_str})")
 
                 # Build Payload
                 price_val = clean_float(price_str)
@@ -147,6 +152,9 @@ def run_automated_scrape(mode="full"):
                         "nome": result.get("title", {}).get("company", ticker),
                         "lastFullSync": datetime.now().isoformat()
                     }
+                
+                if val_stock > 0:
+                    payload["valorStock"] = val_stock
 
                     # Add other cleaned metrics
                     cleaned_metrics = clean_row_for_firestore(metrics)
