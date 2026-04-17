@@ -221,7 +221,7 @@ class YahooFinanceScraper(BaseScraper):
             soup = BeautifulSoup(html, "lxml")
             summary = self._parse_summary(soup)
             if summary.get("metrics"):
-                ticker_used = orig_ticker
+                ticker_used = ticker_to_try
             else:
                 raise ValueError("No metrics")
         except:
