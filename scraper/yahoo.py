@@ -73,14 +73,26 @@ class YahooFinanceScraper(BaseScraper):
             normalized_ticker = BaseScraper.normalize_ticker(ticker, market)
             stock = yf.Ticker(normalized_ticker)
             
-            # Current data
-            info = stock.info
-            hist = stock.history(period="2y", interval="1d")  # Daily for changes
+            # Current data - split to be more resilient
+            info = {}
+            try:
+                info = stock.info
+            except Exception as e:
+                print(f"yfinance info error for {ticker}: {e}")
             
-            if hist.empty or len(hist) < 5:
-                return None
+            hist = None
+            try:
+                hist = stock.history(period="2y", interval="1d")
+            except Exception as e:
+                print(f"yfinance history error for {ticker}: {e}")
             
-            current_price = info.get('currentPrice') or info.get('regularMarketPrice') or hist['Close'].iloc[-1]
+            if hist is None or hist.empty:
+                # If both info and hist fail, and hist is really needed for price
+                if not info or ('currentPrice' not in info and 'regularMarketPrice' not in info):
+                    return None
+                current_price = info.get('currentPrice') or info.get('regularMarketPrice')
+            else:
+                current_price = info.get('currentPrice') or info.get('regularMarketPrice') or hist['Close'].iloc[-1]
             
             # Compute intervals (trading days approx)
             changes = {}
@@ -90,22 +102,34 @@ class YahooFinanceScraper(BaseScraper):
                 '1y': 252  # 1 year ~252
             }
             
-            for interval, days_back in periods.items():
-                if len(hist) >= days_back + 1:
-                    past_close = hist['Close'].iloc[-(days_back + 1)]
-                    change_pct = ((current_price - past_close) / past_close) * 100
-                    changes[f'priceChange_{interval}'] = round(change_pct, 2)
+            if hist is not None and not hist.empty:
+                for interval, days_back in periods.items():
+                    if len(hist) >= days_back + 1:
+                        past_close = hist['Close'].iloc[-(days_back + 1)]
+                        change_pct = ((current_price - past_close) / past_close) * 100
+                        changes[f'priceChange_{interval}'] = round(change_pct, 2)
             
             # --- Technical Indicators: RSI ---
             rsi = None
             try:
-                if len(hist) >= 15:
+                if hist is not None and len(hist) >= 15:
                     delta = hist['Close'].diff()
                     gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
                     loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
                     rs = gain / loss
                     rsi_series = 100 - (100 / (1 + rs))
                     rsi = round(rsi_series.iloc[-1], 2)
+            except:
+                pass
+
+            # --- Technical Indicators: SMA fallback ---
+            sma50 = info.get('fiftyDayAverage')
+            sma200 = info.get('twoHundredDayAverage')
+            try:
+                if (sma50 is None or sma50 == 0) and hist is not None and len(hist) >= 50:
+                    sma50 = round(hist['Close'].tail(50).mean(), 4)
+                if (sma200 is None or sma200 == 0) and hist is not None and len(hist) >= 200:
+                    sma200 = round(hist['Close'].tail(200).mean(), 4)
             except:
                 pass
 
@@ -132,8 +156,8 @@ class YahooFinanceScraper(BaseScraper):
                 'roe': info.get('returnOnEquity'),
                 'roa': info.get('returnOnAssets'),
                 'roic': info.get('returnOnCapital'), # Some tickets have this
-                'sma50': info.get('fiftyDayAverage'),
-                'sma200': info.get('twoHundredDayAverage'),
+                'sma50': sma50,
+                'sma200': sma200,
             }
             
             # Add all info keys cleaned

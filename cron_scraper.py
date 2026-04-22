@@ -159,32 +159,57 @@ def run_automated_scrape(mode="full"):
         # If valorStock is missing or invalid, scrape price first.
         if not _is_valid_valor_stock(valor_stock_current):
             logger.info(
-                f"[{ticker_id}] valorStock is invalid/missing "
-                f"(current={valor_stock_current!r}). Force-scraping price..."
+                f"[{ticker_id}] valorStock is invalid/missing (current={valor_stock_current!r}). "
+                f"Performing FULL bootstrap for all indicators..."
             )
-            price_val, result, source_name, method_used = _scrape_price_for_ticker(
-                ticker_id, ticker, market_code, sources_to_try
-            )
-            if price_val:
-                price_payload = {
-                    "valorStock": price_val,
-                    "source_used": f"{source_name} ({method_used})",
-                    "method_used": method_used,
-                    "nome": result.get("title", {}).get("company", ticker),
-                }
-                if firebase_manager.update_market_data(ticker_id, price_payload):
-                    logger.info(
-                        f"[{ticker_id}] valorStock bootstrapped → {price_val} via {source_name}"
+            # Find first source that works and do a full sync payload
+            bootstrapped = False
+            for source_name in sources_to_try:
+                if source_name not in SCRAPER_REGISTRY: continue
+                try:
+                    scraper = SCRAPER_REGISTRY[source_name]
+                    result = scraper.scrape_quote(ticker=ticker, market=market_code)
+                    metrics = result.get("metrics", {})
+                    price_val = clean_float(
+                        metrics.get("valorStock") or metrics.get("price") or metrics.get("Price") or 
+                        metrics.get("Latest quote") or metrics.get("NAV")
                     )
-                else:
-                    logger.error(f"[{ticker_id}] Failed to persist bootstrapped valorStock.")
-            else:
-                logger.error(
-                    f"[{ticker_id}] Could not scrape a valid price from any source. Skipping."
-                )
+                    
+                    if price_val and price_val > 0:
+                        # Success! Build full payload immediately
+                        payload = {
+                            "valorStock": price_val,
+                            "priceChange_1d": clean_float(metrics.get("change_pct") or metrics.get("Change")),
+                            "priceChange_1w": clean_float(metrics.get("priceChange_1w") or metrics.get("Perf Week")),
+                            "priceChange_1m": clean_float(metrics.get("priceChange_1m") or metrics.get("Perf Month")),
+                            "priceChange_1y": clean_float(metrics.get("priceChange_1y") or metrics.get("Perf Year")),
+                            "yield": clean_float(metrics.get("yield") or metrics.get("Dividend Yield") or metrics.get("Dividend %")),
+                            "pe": clean_float(metrics.get("pe") or metrics.get("PE Ratio (TTM)") or metrics.get("P/E")),
+                            "rsi": clean_float(metrics.get("rsi") or metrics.get("RSI (14)")),
+                            "sma50": clean_float(metrics.get("sma50") or metrics.get("SMA50")),
+                            "sma200": clean_float(metrics.get("sma200") or metrics.get("SMA200")),
+                            "marketCap": clean_float(metrics.get("Market Cap") or metrics.get("marketCap") or metrics.get("Fund size")),
+                            "source_used": f"{source_name} (bootstrap)",
+                            "nome": result.get("title", {}).get("company", ticker),
+                            "lastFullSync": datetime.now().isoformat(),
+                        }
+                        # Add extra metrics
+                        cleaned_metrics = clean_row_for_firestore(metrics)
+                        for k, v in cleaned_metrics.items():
+                            if k not in payload: payload[k] = v
 
+                        if firebase_manager.update_market_data(ticker_id, payload):
+                            logger.info(f"[{ticker_id}] FULL bootstrap success via {source_name}")
+                            bootstrapped = True
+                            break
+                except Exception as e:
+                    logger.error(f"[{ticker_id}] Bootstrap error with {source_name}: {e}")
+            
+            if not bootstrapped:
+                logger.error(f"[{ticker_id}] Could not bootstrap even a price. Skipping.")
+            
             time.sleep(2)
-            continue  # Skip normal fast/full update this cycle
+            continue
         # ── END DECISION POINT ────────────────────────────────────────
 
         # Normal fast / full sync
@@ -238,13 +263,13 @@ def run_automated_scrape(mode="full"):
                         "priceChange_1d": clean_float(change_str),
                         "priceChange_1w": clean_float(metrics.get("priceChange_1w") or metrics.get("Perf Week")),
                         "priceChange_1y": clean_float(metrics.get("priceChange_1y") or metrics.get("Perf Year")),
-                        "priceChange_1m": clean_float(metrics.get("priceChange_1m")),
-                        "yield": clean_float(metrics.get("yield") or metrics.get("Dividend Yield")),
-                        "pe": clean_float(metrics.get("pe") or metrics.get("PE Ratio (TTM)")),
-                        "roa": clean_float(metrics.get("roa") or metrics.get("ROA")),
-                        "roe": clean_float(metrics.get("roe") or metrics.get("ROE")),
+                        "priceChange_1m": clean_float(metrics.get("priceChange_1m") or metrics.get("Perf Month")),
+                        "yield": clean_float(metrics.get("yield") or metrics.get("Dividend Yield") or metrics.get("Dividend %")),
+                        "pe": clean_float(metrics.get("pe") or metrics.get("PE Ratio (TTM)") or metrics.get("P/E")),
+                        "roa": clean_float(metrics.get("roa") or metrics.get("ROA") or metrics.get("Return on Assets")),
+                        "roe": clean_float(metrics.get("roe") or metrics.get("ROE") or metrics.get("Return on Equity")),
                         "roi": clean_float(metrics.get("roi") or metrics.get("ROI")),
-                        "rsi": clean_float(metrics.get("rsi")),
+                        "rsi": clean_float(metrics.get("rsi") or metrics.get("RSI (14)")),
                         "roic": clean_float(metrics.get("roic")),
                         "ev_ebitda": clean_float(metrics.get("ev_ebitda") or metrics.get("EV/EBITDA")),
                         "marketCap": clean_float(market_cap_str),

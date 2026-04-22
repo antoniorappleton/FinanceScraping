@@ -38,13 +38,19 @@ def start_scheduler(interval_minutes=240):  # Default 4 hours
     print("Press Ctrl+C to stop.")
     
     try:
-        last_full_sync_date = None
+        last_full_sync_time = None
         while True:
             now = datetime.now()
-            if now.weekday() == 6 and last_full_sync_date != now.date():  # Sunday
+            
+            # Run FULL sync if it's the first time OR if 20 hours have passed since last full
+            should_run_full = (last_full_sync_time is None or 
+                              (now - last_full_sync_time).total_seconds() > 20 * 3600)
+            
+            if should_run_full:
                 run_scraper("full")
-                last_full_sync_date = now.date()
-            run_scraper("fast")
+                last_full_sync_time = now
+            else:
+                run_scraper("fast")
             
             next_run = datetime.now() + timedelta(minutes=interval_minutes)
             print(f"\nSleeping for {interval_minutes} min...")

@@ -35,6 +35,7 @@ TICKER_ISIN_MAP: Dict[str, str] = {
     "JEDI": "IE00BFNM3P36",   # JPMorgan Global Equity
     "VVMX": "IE00BKX55S42",   # Vanguard FTSE All-World
     "VZLC": "IE00B3RBWM25",   # Vanguard FTSE All-World High Div
+    "VWCE": "IE00BK5BQT80",   # Vanguard FTSE All-World (Acc)
     # FT Nasdaq Smart Grid
     "GRID":     "IE000J80JTL1",
     "GRID:GER": "IE000J80JTL1",
@@ -43,6 +44,7 @@ TICKER_ISIN_MAP: Dict[str, str] = {
     # Added
     "EXSA": "DE0002635307",   # iShares STOXX Europe 600
     "EUNN": "IE00B3VWMM18",   # iShares MSCI World Small Cap
+    "NUKL": "IE000M7V94J1",   # VanEck Uranium and Nuclear
 }
 
 
@@ -180,13 +182,6 @@ class JustETFScraper(BaseScraper):
              if match:
                  metrics["valorStock"] = match.group(1)
                  
-        if not metrics.get("valorStock"):
-            # Check the <title> tag (e.g. "iShares MSCI World Small Cap UCITS ETF | 336.63 | IE00B3VWMM18")
-            title_tag = soup.find("title")
-            if title_tag:
-                match = re.search(r"([\d,.]+)", title_tag.get_text())
-                if match:
-                    metrics["valorStock"] = match.group(1)
         
         # Robust extraction: multiple selectors for JustETF profile data
         # 1. h1 title already done

@@ -156,7 +156,10 @@ class FirebaseManager:
 
         try:
             # Selecionar apenas campos que fazem sentido no portfólio
-            fields_to_sync = ["valorStock", "sma50", "sma200", "priceChange_1d"]
+            fields_to_sync = [
+                "valorStock", "sma50", "sma200", "priceChange_1d", 
+                "rsi", "yield", "pe", "roe", "roa"
+            ]
             sync_payload = {k: data[k] for k in fields_to_sync if k in data}
             
             if not sync_payload:
