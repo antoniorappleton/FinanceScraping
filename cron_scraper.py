@@ -2,6 +2,7 @@ import time
 import os
 import logging
 import argparse
+import random
 from datetime import datetime
 from dotenv import load_dotenv
 load_dotenv()
@@ -17,6 +18,12 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# ── Rate-limiting configuration ──────────────────────────────────────
+BASE_DELAY_SECONDS = 3        # Delay between tickers
+RATE_LIMIT_DELAY = 30         # Delay after a 429 response
+MAX_BACKOFF_DELAY = 120       # Maximum backoff delay
+JITTER_RANGE = (0.5, 1.5)     # Random jitter multiplier range
 
 
 def _is_valid_valor_stock(val) -> bool:
@@ -72,11 +79,20 @@ def _scrape_price_for_ticker(ticker_id: str, ticker: str, market_code: str, sour
             )
         except Exception as e:
             logger.error(f"[{ticker_id}] Error with source '{source_name}': {e}")
-            if "429" in str(e):
-                logger.warning("Rate limit hit. Sleeping longer...")
-                time.sleep(10)
+            if "429" in str(e) or "rate" in str(e).lower():
+                backoff = min(RATE_LIMIT_DELAY * (2 ** sources_to_try.index(source_name)), MAX_BACKOFF_DELAY)
+                logger.warning(f"Rate limit hit on {source_name}. Backing off {backoff}s...")
+                time.sleep(backoff)
 
     return None, None, None, None
+
+
+def _smart_delay(base=None):
+    """Sleep with jitter to avoid thundering-herd patterns on sources."""
+    base = base or BASE_DELAY_SECONDS
+    jitter = random.uniform(*JITTER_RANGE)
+    delay = base * jitter
+    time.sleep(delay)
 
 
 def run_automated_scrape(mode="full"):
@@ -93,6 +109,8 @@ def run_automated_scrape(mode="full"):
          → Run the normal fast or full sync as configured.
     ─────────────────────────────────────────────────────────────────────
     """
+    start_time = time.time()
+    stats = {"success": 0, "failed": 0, "bootstrapped": 0, "skipped": 0}
     logger.info(f"Starting automated scraping ({mode.upper()} sync)...")
 
     # 1. Get tickers from Firestore
@@ -200,15 +218,19 @@ def run_automated_scrape(mode="full"):
 
                         if firebase_manager.update_market_data(ticker_id, payload):
                             logger.info(f"[{ticker_id}] FULL bootstrap success via {source_name}")
+                            stats["bootstrapped"] += 1
                             bootstrapped = True
                             break
                 except Exception as e:
                     logger.error(f"[{ticker_id}] Bootstrap error with {source_name}: {e}")
+                    if "429" in str(e) or "rate" in str(e).lower():
+                        time.sleep(RATE_LIMIT_DELAY)
             
             if not bootstrapped:
                 logger.error(f"[{ticker_id}] Could not bootstrap even a price. Skipping.")
+                stats["failed"] += 1
             
-            time.sleep(2)
+            _smart_delay()
             continue
         # ── END DECISION POINT ────────────────────────────────────────
 
@@ -301,6 +323,7 @@ def run_automated_scrape(mode="full"):
                             f"[{ticker_id}] updated ({mode}) via {source_name} "
                             f"(ticker used: {ticker}) → valorStock={price_val}"
                         )
+                        stats["success"] += 1
                         success = True
                         break  # Move to next ticker
                 else:
@@ -310,17 +333,29 @@ def run_automated_scrape(mode="full"):
 
             except Exception as e:
                 logger.error(f"[{ticker_id}] Error scraping with '{source_name}': {e}")
-                if "429" in str(e):
-                    logger.warning("Rate limit hit. Sleeping longer...")
-                    time.sleep(10)
+                if "429" in str(e) or "rate" in str(e).lower():
+                    backoff = min(RATE_LIMIT_DELAY * 2, MAX_BACKOFF_DELAY)
+                    logger.warning(f"Rate limit hit on {source_name}. Backing off {backoff}s...")
+                    time.sleep(backoff)
                 continue
 
         if not success:
             logger.error(f"[{ticker_id}] Failed to update after trying all sources.")
+            stats["failed"] += 1
 
-        time.sleep(2)
+        _smart_delay()
 
-    logger.info(f"Automated {mode} scraping session finished.")
+    # ── Summary Report ──────────────────────────────────────────────
+    elapsed = time.time() - start_time
+    total = stats['success'] + stats['failed'] + stats['bootstrapped']
+    logger.info("=" * 60)
+    logger.info(f"SCRAPE COMPLETE — {mode.upper()} sync")
+    logger.info(f"  Duration:     {elapsed/60:.1f} min")
+    logger.info(f"  Total:        {total} tickers")
+    logger.info(f"  Success:      {stats['success']}")
+    logger.info(f"  Bootstrapped: {stats['bootstrapped']}")
+    logger.info(f"  Failed:       {stats['failed']}")
+    logger.info("=" * 60)
 
 
 if __name__ == "__main__":
