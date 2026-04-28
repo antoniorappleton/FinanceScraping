@@ -100,7 +100,7 @@ class YahooFinanceScraper(BaseScraper):
         """Robust yfinance API fetch + computed intervals."""
         try:
             normalized_ticker = BaseScraper.normalize_ticker(ticker, market)
-            stock = yf.Ticker(normalized_ticker, session=self.session)
+            stock = yf.Ticker(normalized_ticker)
             
             # Current data - split to be more resilient
             info = {}
