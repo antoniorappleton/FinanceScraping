@@ -17,16 +17,17 @@ class YahooFinanceScraper(BaseScraper):
         self.pause_seconds = pause_seconds
         self.session = requests.Session()
         self.session.headers.update({
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-            ),
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.5",
-            "Accept-Encoding": "gzip, deflate",
-            "Connection": "keep-alive",
-            "Upgrade-Insecure-Requests": "1",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+            "Accept": "*/*",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Origin": "https://finance.yahoo.com",
+            "Referer": "https://finance.yahoo.com",
         })
+        # Try to establish a session by visiting the main page
+        try:
+            self.session.get("https://finance.yahoo.com", timeout=10)
+        except:
+            pass
 
     def _clean_text(self, value: Optional[str]) -> Optional[str]:
         if value is None:
@@ -34,11 +35,39 @@ class YahooFinanceScraper(BaseScraper):
         return re.sub(r"\s+", " ", value).strip()
 
     def _get_html(self, ticker: str) -> str:
-        url = f"{self.BASE_URL}/{ticker}"
+        url = f"{self.BASE_URL}/{ticker}" # No trailing slash
         response = self.session.get(url, timeout=20)
         response.raise_for_status()
         time.sleep(self.pause_seconds)
         return response.text
+
+    def _get_stats_from_html(self, ticker: str) -> Dict[str, Any]:
+        """Scrape key-statistics page for SMAs when API fails."""
+        stats = {}
+        try:
+            url = f"{self.BASE_URL}/{ticker}/key-statistics"
+            response = self.session.get(url, timeout=15)
+            if response.status_code != 200:
+                return stats
+            
+            soup = BeautifulSoup(response.text, "lxml")
+            tables = soup.find_all("table")
+            for table in tables:
+                rows = table.find_all("tr")
+                for row in rows:
+                    tds = row.find_all("td")
+                    if len(tds) >= 2:
+                        key = self._clean_text(tds[0].get_text())
+                        val = self._clean_text(tds[1].get_text())
+                        if "50-Day Moving Average" in key:
+                            stats["sma50"] = val
+                        elif "200-Day Moving Average" in key:
+                            stats["sma200"] = val
+                        elif "Market Cap" in key:
+                            stats["marketCap"] = val
+        except Exception as e:
+            print(f"Error scraping stats HTML for {ticker}: {e}")
+        return stats
 
     def _parse_summary(self, soup: BeautifulSoup, ticker: str = "") -> Dict[str, str]:
         data: Dict[str, str] = {}
@@ -71,7 +100,7 @@ class YahooFinanceScraper(BaseScraper):
         """Robust yfinance API fetch + computed intervals."""
         try:
             normalized_ticker = BaseScraper.normalize_ticker(ticker, market)
-            stock = yf.Ticker(normalized_ticker)
+            stock = yf.Ticker(normalized_ticker, session=self.session)
             
             # Current data - split to be more resilient
             info = {}
@@ -94,7 +123,32 @@ class YahooFinanceScraper(BaseScraper):
             else:
                 current_price = info.get('currentPrice') or info.get('regularMarketPrice') or hist['Close'].iloc[-1]
             
-            # Compute intervals (trading days approx)
+            # 2. Compute SMAs from history (Source of Truth)
+            sma20_calc = None
+            sma50_calc = None
+            sma100_calc = None
+            sma200_calc = None
+            
+            if len(hist) >= 20:
+                sma20_calc = float(hist['Close'].rolling(window=20).mean().iloc[-1])
+            if len(hist) >= 50:
+                sma50_calc = float(hist['Close'].rolling(window=50).mean().iloc[-1])
+            if len(hist) >= 100:
+                sma100_calc = float(hist['Close'].rolling(window=100).mean().iloc[-1])
+            if len(hist) >= 200:
+                sma200_calc = float(hist['Close'].rolling(window=200).mean().iloc[-1])
+
+            # 2b. Compute Volume SMA
+            sma_vol20 = None
+            if 'Volume' in hist.columns and len(hist) >= 20:
+                sma_vol20 = float(hist['Volume'].rolling(window=20).mean().iloc[-1])
+
+            # 2c. Trend Signals
+            above_sma50 = current_price > sma50_calc if sma50_calc else None
+            above_sma200 = current_price > sma200_calc if sma200_calc else None
+            golden_cross = sma50_calc > sma200_calc if (sma50_calc and sma200_calc) else None
+
+            # 3. Compute intervals (trading days approx)
             changes = {}
             periods = {
                 '1w': 5,   # 1 week ~5 trading days
@@ -109,7 +163,7 @@ class YahooFinanceScraper(BaseScraper):
                         change_pct = ((current_price - past_close) / past_close) * 100
                         changes[f'priceChange_{interval}'] = round(change_pct, 2)
             
-            # --- Technical Indicators: RSI ---
+            # 4. Compute RSI from history
             rsi = None
             try:
                 if hist is not None and len(hist) >= 15:
@@ -118,7 +172,7 @@ class YahooFinanceScraper(BaseScraper):
                     loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
                     rs = gain / loss
                     rsi_series = 100 - (100 / (1 + rs))
-                    rsi = round(rsi_series.iloc[-1], 2)
+                    rsi = round(float(rsi_series.iloc[-1]), 2)
             except:
                 pass
 
@@ -144,7 +198,7 @@ class YahooFinanceScraper(BaseScraper):
             
             data = {
                 'yf_success': True,
-                'valorStock': float(current_price),
+                'valorStock': current_price,
                 **changes,
                 'marketCap': info.get('marketCap'),
                 'pe': pe,
@@ -152,7 +206,7 @@ class YahooFinanceScraper(BaseScraper):
                 'yield': dividend_yield,
                 'rsi': rsi,
                 'company': company_name,
-                'ticker': ticker_used,
+                'ticker': normalized_ticker,
                 'roe': info.get('returnOnEquity'),
                 'roa': info.get('returnOnAssets'),
                 'roic': info.get('returnOnCapital'), # Some tickets have this
@@ -163,9 +217,9 @@ class YahooFinanceScraper(BaseScraper):
             # Add all info keys cleaned
             for k, v in info.items():
                 if isinstance(v, (int, float)):
-                    # Normalize common names for transformer
                     key = k.lower().replace(" ", "_")
-                    data[f'info_{key}'] = v
+                    if f'info_{key}' not in data:
+                        data[f'info_{key}'] = v
             
             return data
             
@@ -210,14 +264,26 @@ class YahooFinanceScraper(BaseScraper):
         if ":" in norm_ticker:
             # Handle ELI:BCP -> BCP.LS, EPA:CS -> CS.PA, etc.
             parts = norm_ticker.split(":")
-            if parts[0] == "ELI":
-                norm_ticker = f"{parts[1]}.LS"
-            elif parts[0] == "EPA":
-                norm_ticker = f"{parts[1]}.PA"
-            elif parts[0] == "FRA" or parts[0] == "GER":
-                norm_ticker = f"{parts[1]}.DE"
-            elif parts[0] == "IE":
-                norm_ticker = f"{parts[1]}.IR"
+            prefix = parts[0]
+            symbol = parts[1]
+            if prefix == "ELI":
+                norm_ticker = f"{symbol}.LS"
+            elif prefix == "EPA":
+                norm_ticker = f"{symbol}.PA"
+            elif prefix in ["FRA", "GER", "XETR"]:
+                norm_ticker = f"{symbol}.DE"
+            elif prefix == "IE":
+                norm_ticker = f"{symbol}.IR"
+            elif prefix == "LON":
+                norm_ticker = f"{symbol}.L"
+            elif prefix == "AMS":
+                norm_ticker = f"{symbol}.AS"
+            elif prefix == "MIL":
+                norm_ticker = f"{symbol}.MI"
+            elif prefix == "MAD":
+                norm_ticker = f"{symbol}.MC"
+            elif prefix == "SWI":
+                norm_ticker = f"{symbol}.SW"
                 
         # Primary: yfinance
         yf_data = self._get_yfinance_data(norm_ticker, market)
@@ -244,6 +310,13 @@ class YahooFinanceScraper(BaseScraper):
             html = self._get_html(ticker_to_try)
             soup = BeautifulSoup(html, "lxml")
             summary = self._parse_summary(soup, ticker_to_try)
+            
+            # Try to get SMAs from statistics page HTML as fallback
+            html_stats = self._get_stats_from_html(ticker_to_try)
+            if html_stats:
+                if "metrics" not in summary: summary["metrics"] = {}
+                summary["metrics"].update(html_stats)
+                
             if summary.get("metrics"):
                 ticker_used = ticker_to_try
             else:
@@ -252,6 +325,12 @@ class YahooFinanceScraper(BaseScraper):
             html = self._get_html(normalized_ticker)
             soup = BeautifulSoup(html, "lxml")
             summary = self._parse_summary(soup, normalized_ticker)
+            
+            html_stats = self._get_stats_from_html(normalized_ticker)
+            if html_stats:
+                if "metrics" not in summary: summary["metrics"] = {}
+                summary["metrics"].update(html_stats)
+
             if not summary.get("metrics"):
                 raise ValueError("No data found for ticker in Yahoo Finance")
             ticker_used = normalized_ticker
