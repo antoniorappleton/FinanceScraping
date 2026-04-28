@@ -132,8 +132,21 @@ class FirebaseManager:
             return False
 
         try:
-            # Remove None values — never overwrite good data with null
-            data = {k: v for k, v in data.items() if v is not None}
+            # Filtro rigoroso: remove None, strings vazias, "#N/A" e zeros em campos numéricos
+            # para não sobrescrever dados válidos com lixo do scraper.
+            def is_valid(k, v):
+                if v is None: return False
+                if isinstance(v, str) and (v.strip() == "" or "#N/A" in v.upper()): return False
+                # Campos conhecidos por serem sempre > 0
+                if k in ["valorStock", "sma50", "sma200", "rsi", "yield", "pe"] and isinstance(v, (int, float)) and v == 0:
+                    return False
+                return True
+
+            data = {k: v for k, v in data.items() if is_valid(k, v)}
+
+            if not data:
+                print(f"Firebase: Payload vazio após filtragem para {ticker}. Nada a atualizar.")
+                return True # Consideramos sucesso para não travar o loop
 
             # Adiciona timestamp do servidor
             data['updatedAt'] = firestore.SERVER_TIMESTAMP
