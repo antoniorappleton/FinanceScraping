@@ -97,11 +97,12 @@ Inclui todos os campos do Fast Sync, mais:
 | `lastFullSync` | Timestamp | Data/hora do último Full Sync | — |
 | `updatedAt` | Timestamp | Último update (server timestamp) | — |
 
-### Propagação para `ativos` (Portfólio)
+### Fluxo de Dados & Propagação
 
-Os seguintes campos são automaticamente propagados para todos os documentos correspondentes na coleção `ativos`:
+1. **Master Collection (`acoesDividendos`)**: É o destino principal e exaustivo. Todos os 25+ indicadores descritos acima são guardados aqui.
+2. **Sync Automático (`ativos`)**: Sempre que a master é atualizada, o sistema propaga automaticamente apenas os campos essenciais para a coleção de portfólio (ativos), garantindo que o dashboard esteja sempre sincronizado com os dados mais recentes:
 
-`valorStock`, `sma50`, `sma200`, `priceChange_1d`, `rsi`, `yield`, `pe`, `roe`, `roa`
+   `valorStock`, `sma50`, `sma200`, `priceChange_1d`, `rsi`, `yield`, `pe`, `roe`, `roa`
 
 ---
 
