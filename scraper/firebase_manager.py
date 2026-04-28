@@ -125,11 +125,16 @@ class FirebaseManager:
     def update_market_data(self, ticker, data):
         """
         Atualiza ou cria um documento na coleção 'marketData'.
+        Campos com valor None são REMOVIDOS do payload para não
+        sobrescrever dados existentes válidos no Firestore.
         """
         if not self.db:
             return False
 
         try:
+            # Remove None values — never overwrite good data with null
+            data = {k: v for k, v in data.items() if v is not None}
+
             # Adiciona timestamp do servidor
             data['updatedAt'] = firestore.SERVER_TIMESTAMP
             data['ultimaAtu'] = firestore.SERVER_TIMESTAMP
