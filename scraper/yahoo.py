@@ -17,11 +17,14 @@ class YahooFinanceScraper(BaseScraper):
         self.pause_seconds = pause_seconds
         self.session = requests.Session()
         self.session.headers.update({
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
-            "Accept": "*/*",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
             "Accept-Language": "en-US,en;q=0.9",
-            "Origin": "https://finance.yahoo.com",
-            "Referer": "https://finance.yahoo.com",
+            "Upgrade-Insecure-Requests": "1",
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-User": "?1",
         })
         # Try to establish a session by visiting the main page
         try:
@@ -100,7 +103,7 @@ class YahooFinanceScraper(BaseScraper):
         """Robust yfinance API fetch + computed intervals."""
         try:
             normalized_ticker = BaseScraper.normalize_ticker(ticker, market)
-            stock = yf.Ticker(normalized_ticker)
+            stock = yf.Ticker(normalized_ticker, session=self.session)
             
             # Current data - split to be more resilient
             info = {}
