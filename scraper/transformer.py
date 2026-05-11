@@ -133,6 +133,9 @@ def clean_row_for_firestore(row: Dict[str, Any]) -> Dict[str, Any]:
         # 2. Clean Value
         if clean_key.lower() in info_fields or k.lower() in info_fields:
             clean_row[clean_key] = v
+        elif isinstance(v, (list, dict)):
+            # Preserve lists and dicts (like holdings)
+            clean_row[clean_key] = v
         elif isinstance(v, str) and any(char.isdigit() for char in v):
             # If it contains digits, try to clean as float
             clean_row[clean_key] = clean_float(v)

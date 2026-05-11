@@ -159,10 +159,34 @@ class FirebaseManager:
             # Propagar para a coleção 'ativos' (portfólio)
             self._propagate_to_portfolio(ticker, data)
             
+            # Se houver holdings (ETF), guardar na coleção específica
+            if "holdings" in data:
+                self.save_etf_holdings(ticker, data["holdings"], data.get("company"))
+
             return True
         except Exception as e:
             print(f"Firebase: Erro ao atualizar marketData para {ticker}: {e}")
             return False
+
+    def save_etf_holdings(self, ticker, holdings, name=None):
+        """
+        Guarda a estrutura de holdings de um ETF numa coleção dedicada.
+        """
+        if not self.db or not holdings:
+            return
+
+        try:
+            doc_ref = self.db.collection("etfHoldings").document(ticker)
+            payload = {
+                "ticker": ticker,
+                "name": name,
+                "holdings": holdings,
+                "updatedAt": firestore.SERVER_TIMESTAMP
+            }
+            doc_ref.set(payload, merge=True)
+            print(f"Firebase: Holdings guardadas para o ETF {ticker}")
+        except Exception as e:
+            print(f"Firebase: Erro ao guardar holdings para {ticker}: {e}")
 
     def _propagate_to_portfolio(self, ticker, data):
         """

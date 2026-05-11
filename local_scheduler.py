@@ -39,9 +39,25 @@ def start_scheduler(interval_minutes=240):  # Default 4 hours
     
     try:
         last_full_sync_time = None
+        last_holdings_sync_day = None  # To track which day we ran the holdings sync
+        
         while True:
             now = datetime.now()
             
+            # 1. Check if it's the WEEKEND (Saturday=5, Sunday=6) for Holdings Sync
+            # We run it only once per weekend day
+            if now.weekday() >= 5 and last_holdings_sync_day != now.date():
+                print(f"\n[ {now.strftime('%Y-%m-%d %H:%M:%S')} ] Weekend detected! Running FULL HOLDINGS sync for all assets...")
+                try:
+                    # Run first for 'ativos' (priority)
+                    subprocess.run([sys.executable, "scripts/sync_ativos_holdings.py"], capture_output=False)
+                    # Then run for all 'acoesDividendos'
+                    subprocess.run([sys.executable, "scripts/sync_all_holdings_weekend.py"], capture_output=False)
+                    last_holdings_sync_day = now.date()
+                except Exception as e:
+                    print(f"Error running holdings sync: {e}")
+
+            # 2. Normal sync logic
             # Run FULL sync if it's the first time OR if 20 hours have passed since last full
             should_run_full = (last_full_sync_time is None or 
                               (now - last_full_sync_time).total_seconds() > 20 * 3600)

@@ -221,6 +221,33 @@ class YahooFinanceScraper(BaseScraper):
                     if f'info_{key}' not in data:
                         data[f'info_{key}'] = v
             
+            # --- ETF Holdings ---
+            holdings_list = []
+            try:
+                # Check if it's an ETF and has holdings
+                quote_type = info.get('quoteType')
+                if quote_type == 'ETF':
+                    holdings = None
+                    try:
+                        holdings = stock.funds_data.top_holdings
+                    except:
+                        pass
+                    
+                    if holdings is not None and not holdings.empty:
+                        # Convert DataFrame to list of dicts
+                        # Symbol is the index
+                        for symbol, row_data in holdings.iterrows():
+                            holdings_list.append({
+                                "symbol": str(symbol),
+                                "name": str(row_data.get("Name", "")),
+                                "weight": float(row_data.get("Holding Percent", 0))
+                            })
+            except Exception as e:
+                print(f"Error fetching holdings for {ticker}: {e}")
+
+            if holdings_list:
+                data['holdings'] = holdings_list
+
             return data
             
         except Exception as e:
